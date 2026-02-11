@@ -48,10 +48,7 @@ static const int TWINKLE_US          = 5000000;  // 5s — the fundamental breat
 
 static const int SCROLL_BASE_DELAY_US = 47000;
 static const double SCROLL_EXPONENTS[] = {0, 1, 1.5};  // φ exponents per line
-static const int PAUSE_BETWEEN_US[]  = {
-    TWINKLE_US / 4,                   // 1.25s — quarter breath after line 1
-    TWINKLE_US / 2,                   // 2.50s — half breath after line 2
-};
+static const int PAUSE_BETWEEN_US    = HEARTBEAT_US;  // one heartbeat between lines
 static const int STARGAZE_US         = TWINKLE_US;            // one full breath
 static const int SEED_HOLD_US        = TWINKLE_US * 3 / 2;   // 7.5s — breath and a half
 static const int DISSOLVE_GENS       = 16;
@@ -364,7 +361,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < NUM_LINES - 1 && !interrupted; i++) {
         printf("  Scrolling: \"%s\"\n", TICKER_LINES[i]);
         canvas = scroll_line(matrix, canvas, TICKER_LINES[i], y_offset, i);
-        canvas = pause_with_stars(matrix, canvas, y_offset, PAUSE_BETWEEN_US[i]);
+        canvas = pause_with_stars(matrix, canvas, y_offset, PAUSE_BETWEEN_US);
     }
 
     if (!interrupted) {

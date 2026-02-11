@@ -34,8 +34,9 @@ Timing derives from two rhythms: the **breath** (5-second twinkle cycle) and the
 1. **Stargazing** — 5 seconds of pure night sky. 12 stars twinkle on black. One full breath before anything happens.
 2. **Ticker** scrolls three lines in gothic blackletter, each line slower than the last (φ deceleration: 47ms → 76ms → 101ms per pixel):
    - *Fate isnt what were up against* — brisk
-   - *Theres no design* — easing (¼-breath pause before)
-   - *No flaw to find* — drifting (½-breath pause before)
+   - *Theres no design* — easing
+   - *No flaw to find* — drifting
+   One heartbeat pause between each line.
 3. **Dawn** — "find" holds for 7.5s (1½ breaths) as the background transitions from black → primary blue. Stars fade out.
 4. **Dissolve** — Game of Life rules kick in. The letters shatter into green cells on a blue sea over 16 generations.
 5. **Cruise** — simulation runs indefinitely with a **circadian rhythm**: a random walk across 9 tempo steps (58–100 BPM) that drifts every 8 generations, bell-curving around 80 BPM. Auto-reseeds after 50 stale generations.
@@ -101,7 +102,7 @@ Timing derives from two rhythms. The **breath** (5s twinkle cycle) governs pause
 |-----------|-------|------------|
 | `TWINKLE` | 5s cycle | The fundamental breath |
 | `STARGAZE` | 5000ms | 1 breath — opening pause |
-| `PAUSE_BETWEEN` | 1250, 2500ms | ¼, ½ breath between lines |
+| `PAUSE_BETWEEN` | 750ms | One heartbeat between lines |
 | `SEED_HOLD` | 7500ms | 1½ breaths — "find" hold + dawn |
 | `SCROLL_BASE_DELAY` | 47ms/px | Fastest line (line 1) |
 | `SCROLL_EXPONENTS` | 0, 1, 1.5 | φ⁰=47, φ¹=76, φ^1.5=101 ms/px |

@@ -65,10 +65,7 @@ TICKER_LINES = [
 ]
 SCROLL_BASE_DELAY_MS = 47             # px delay for longest line
 SCROLL_EXPONENTS = [0, 1, 1.5]        # φ exponents per line: 1×, φ, φ^1.5
-PAUSE_BETWEEN_MS = [
-    TWINKLE_MS // 4,                  # 1.25s — quarter breath after line 1
-    TWINKLE_MS // 2,                  # 2.50s — half breath after line 2
-]
+PAUSE_BETWEEN_MS = HEARTBEAT_MS       # one heartbeat between lines
 STARGAZE_MS = TWINKLE_MS              # one full breath before first scroll
 SEED_HOLD_MS = TWINKLE_MS + TWINKLE_MS // 2  # 7.5s — breath and a half on "find"
 
@@ -324,7 +321,7 @@ class GameOfLife:
                 print(f'  Scrolling: "{lines[idx]}"')
                 self.scroll_line(
                     lines[idx],
-                    lambda: self.pause_then(PAUSE_BETWEEN_MS[idx],
+                    lambda: self.pause_then(PAUSE_BETWEEN_MS,
                                              lambda: scroll_next(idx + 1)),
                     line_index=idx
                 )
