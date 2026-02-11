@@ -51,7 +51,7 @@ static const double SCROLL_EXPONENTS[] = {0, 1, 1.5};  // φ exponents per line
 static const int PAUSE_BETWEEN_US    = HEARTBEAT_US;  // one heartbeat between lines
 static const int STARGAZE_US         = TWINKLE_US;            // one full breath
 static const int SEED_HOLD_US        = TWINKLE_US * 3 / 2;   // 7.5s — breath and a half
-static const int DISSOLVE_GENS       = 16;
+static const int DISSOLVE_GENS       = 12;
 static const int STALE_RESET_GENS    = 50;
 static const float INITIAL_DENSITY   = 0.3f;
 
