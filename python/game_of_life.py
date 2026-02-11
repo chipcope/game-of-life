@@ -6,8 +6,9 @@ Night sky with twinkling stars → dawn transition → blue sea.
 
 Timing derives from two rhythms:
   • The breath: 5s twinkle cycle. Pauses are ¼, ½, 1, 1½ fractions.
-  • The heartbeat: 750ms generation tick ≈ resting pulse.
+  • The heartbeat: 1200ms generation tick (50 BPM, athletic mode).
   • Scroll decelerates line-to-line by φ (golden ratio).
+  • Circadian rhythm: random walk across 40–62 BPM.
 
 Requires: rpi-rgb-led-matrix Python bindings installed.
 Usage:    sudo python3 game_of_life.py
@@ -40,7 +41,7 @@ STALE_RESET_GENS = 50
 #   Scroll decelerates by φ (golden ratio).
 #   Generation tick ≈ resting heartbeat.
 
-HEARTBEAT = 0.750                     # 80 BPM
+HEARTBEAT = 1.200                     # 50 BPM — athletic mode
 PHI = 1.618033988749895
 TWINKLE_PERIOD = 5.0                  # one full cycle in seconds
 
@@ -69,10 +70,10 @@ DAWN_STEP_DELAY = SEED_HOLD / DAWN_STEPS
 DISSOLVE_GENS = 12
 
 # --- Circadian Rhythm ---
-#   Random walk on 9 steps, centered on 750ms (80 BPM).
-#   Every 8 generations: step up, down, or stay (equal odds).
-#   Reflects at boundaries. Produces a bell curve around center.
-CIRCADIAN_STEPS = [0.600, 0.632, 0.674, 0.714, 0.750, 0.800, 0.857, 0.938, 1.034]
+#   Calibrated for a 39-year-old distance runner who eats
+#   exclusively whole foods and does Pilates with admirable
+#   dedication. Center: 50 BPM. Range: 40–62 BPM.
+CIRCADIAN_STEPS = [0.968, 1.034, 1.091, 1.154, 1.200, 1.250, 1.333, 1.395, 1.500]
 CIRCADIAN_CENTER = 4
 CIRCADIAN_STRIDE = 8
 

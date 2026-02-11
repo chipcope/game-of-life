@@ -8,8 +8,9 @@ Green text is the one constant as the world transforms around it.
 
 Timing derives from two rhythms:
   • The breath: 5s twinkle cycle. Pauses are ¼, ½, 1, 1½ fractions.
-  • The heartbeat: 750ms generation tick ≈ resting pulse.
+  • The heartbeat: 1200ms generation tick (50 BPM, athletic mode).
   • Scroll decelerates line-to-line by φ (golden ratio).
+  • Circadian rhythm: random walk across 40–62 BPM.
 
 Run:  python3 preview.py
 """
@@ -49,7 +50,7 @@ STAR_RGB = (200, 220, 255)
 #   Scroll decelerates by φ (golden ratio).
 #   Generation tick ≈ resting heartbeat.
 
-HEARTBEAT_MS = 750                    # 80 BPM
+HEARTBEAT_MS = 1200                   # 50 BPM — athletic mode
 PHI = 1.618033988749895
 
 # --- Stars ---
@@ -79,24 +80,29 @@ INITIAL_DENSITY = 0.3
 STALE_RESET_GENS = 50
 
 # --- Circadian Rhythm ---
-#   Random walk on 9 steps, centered on 750ms (80 BPM).
+#   Calibrated for a 39-year-old distance runner who eats
+#   exclusively whole foods and does Pilates with admirable
+#   dedication. The kind of resting heart rate that makes
+#   doctors double-check their equipment.
+#
+#   Random walk on 9 steps, centered on 50 BPM (1200ms).
 #   Every 8 generations: step up, down, or stay (equal odds).
-#   Reflects at boundaries. Produces a bell curve around center.
+#   Reflects at boundaries. Bell curves around center.
 #
 #   Step  BPM   Delay   Feel
-#     0   100    600    energetic
-#     1    95    632    lively
-#     2    89    674    brisk
-#     3    84    714    walking
-#     4    80    750    center
-#     5    75    800    easy
-#     6    70    857    contemplative
-#     7    64    938    meditative
-#     8    58   1034    deep rest
+#     0    62    968    brisk morning coffee
+#     1    58   1034    lively
+#     2    55   1091    walking the dog
+#     3    52   1154    easy chair
+#     4    50   1200    center — athletic resting
+#     5    48   1250    deep reading
+#     6    45   1333    contemplative
+#     7    43   1395    parasympathetic bliss
+#     8    40   1500    elite zen
 
-CIRCADIAN_STEPS = [600, 632, 674, 714, 750, 800, 857, 938, 1034]
+CIRCADIAN_STEPS = [968, 1034, 1091, 1154, 1200, 1250, 1333, 1395, 1500]
 CIRCADIAN_CENTER = 4
-CIRCADIAN_STRIDE = 8                  # gens between steps (one twinkle cycle)
+CIRCADIAN_STRIDE = 8                  # gens between steps
 
 
 def lerp_color(c1, c2, t):
