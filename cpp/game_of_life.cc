@@ -1,172 +1,442 @@
 /*
  * Conway's Game of Life on a 64x64 RGB LED Matrix.
  *
+ * Night sky with twinkling stars → dawn transition → blue sea.
+ *
+ * Timing derives from two rhythms:
+ *   The breath: 5s twinkle cycle. Pauses are 1/4, 1/2, 1, 3/2 fractions.
+ *   The heartbeat: 750ms generation tick.
+ *   Scroll decelerates line-to-line by phi (golden ratio).
+ *
  * Requires: hzeller/rpi-rgb-led-matrix library built and installed.
  *
- * Build:
- *   g++ -o game-of-life game_of_life.cc \
- *       -I /path/to/rpi-rgb-led-matrix/include \
- *       -L /path/to/rpi-rgb-led-matrix/lib \
- *       -lrgbmatrix -lpthread -lrt -lm -O3 -Wall
- *
- * Run:
- *   sudo ./game-of-life --led-rows=64 --led-cols=64 --led-gpio-mapping=adafruit-hat
+ * Build (from cpp/ directory):  make
+ * Run:                          sudo ./game-of-life
  */
 
+#include "bubble_font.h"
 #include "led-matrix.h"
-#include "threaded-canvas-manipulator.h"
 
+#include <cmath>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
-#include <unistd.h>
 #include <signal.h>
+#include <string>
+#include <unistd.h>
+#include <vector>
+#include <set>
+#include <utility>
+#include <sys/time.h>
 
 using namespace rgb_matrix;
+
+// --- Configuration ---
+static const int ROWS = 64;
+static const int COLS = 64;
+
+// --- The Breath ---
+//   Everything nests inside the twinkle cycle.
+//   Twinkle = 5s. Pauses are cycle fractions.
+//   Scroll decelerates by φ (golden ratio).
+//   Generation tick ≈ resting heartbeat.
+
+static const int HEARTBEAT_US        = 750000;   // 80 BPM
+static const double PHI              = 1.618033988749895;
+static const int TWINKLE_US          = 5000000;  // 5s — the fundamental breath
+
+static const int SCROLL_BASE_DELAY_US = 47000;
+static const double SCROLL_EXPONENTS[] = {0, 1, 1.5};  // φ exponents per line
+static const int PAUSE_BETWEEN_US[]  = {
+    TWINKLE_US / 4,                   // 1.25s — quarter breath after line 1
+    TWINKLE_US / 2,                   // 2.50s — half breath after line 2
+};
+static const int STARGAZE_US         = TWINKLE_US;            // one full breath
+static const int SEED_HOLD_US        = TWINKLE_US * 3 / 2;   // 7.5s — breath and a half
+static const int DISSOLVE_GENS       = 16;
+static const int STALE_RESET_GENS    = 50;
+static const float INITIAL_DENSITY   = 0.3f;
+
+// --- Circadian Rhythm ---
+//   Random walk on 9 steps, centered on 750ms (80 BPM).
+//   Every 8 generations: step up, down, or stay (equal odds).
+//   Reflects at boundaries. Produces a bell curve around center.
+static const int CIRCADIAN_STEPS[]   = {600000, 632000, 674000, 714000, 750000,
+                                        800000, 857000, 938000, 1034000};
+static const int CIRCADIAN_COUNT     = 9;
+static const int CIRCADIAN_CENTER    = 4;
+static const int CIRCADIAN_STRIDE    = 8;
+
+// Colors
+static const uint8_t ALIVE_R = 0, ALIVE_G = 255, ALIVE_B = 0;
+static const uint8_t DEAD_R = 0, DEAD_G = 0, DEAD_B = 255;
+static const uint8_t NIGHT_R = 0, NIGHT_G = 0, NIGHT_B = 0;
+static const uint8_t STAR_R = 200, STAR_G = 220, STAR_B = 255;
+
+// Stars
+static const int NUM_STARS = 12;
+static const double TWINKLE_HZ = 1.0 / 5.0;
+
+// Dawn
+static const int DAWN_STEPS = 50;
+static const int DAWN_STEP_US = SEED_HOLD_US / DAWN_STEPS;
+
+static const char *TICKER_LINES[] = {
+    "Fate isnt what were up against",
+    "Theres no design",
+    "No flaw to find",
+};
+static const int NUM_LINES = 3;
 
 volatile bool interrupted = false;
 static void sigint_handler(int) { interrupted = true; }
 
-class GameOfLife : public ThreadedCanvasManipulator {
-public:
-    GameOfLife(Canvas *canvas, int delay_ms = 100, float density = 0.3f)
-        : ThreadedCanvasManipulator(canvas),
-          delay_ms_(delay_ms),
-          density_(density) {
-        rows_ = canvas->height();
-        cols_ = canvas->width();
-        grid_ = new uint8_t[rows_ * cols_]();
-        next_ = new uint8_t[rows_ * cols_]();
-        Randomize();
-    }
+// --- Time helper ---
+static double now_seconds() {
+    struct timeval tv;
+    gettimeofday(&tv, nullptr);
+    return tv.tv_sec + tv.tv_usec / 1000000.0;
+}
 
-    ~GameOfLife() override {
-        delete[] grid_;
-        delete[] next_;
-    }
+// --- Color helpers ---
+static uint8_t lerp(uint8_t a, uint8_t b, double t) {
+    return (uint8_t)(a + (b - a) * t);
+}
 
-    void Run() override {
-        int stale_count = 0;
-        int last_pop = 0;
-
-        while (running() && !interrupted) {
-            // Render current state
-            for (int r = 0; r < rows_; r++) {
-                for (int c = 0; c < cols_; c++) {
-                    if (At(grid_, r, c)) {
-                        canvas()->SetPixel(c, r, 0, 255, 0);  // green
-                    } else {
-                        canvas()->SetPixel(c, r, 0, 0, 0);    // off
-                    }
-                }
-            }
-
-            // Compute next generation
-            for (int r = 0; r < rows_; r++) {
-                for (int c = 0; c < cols_; c++) {
-                    int n = CountNeighbors(r, c);
-                    if (At(grid_, r, c)) {
-                        Set(next_, r, c, (n == 2 || n == 3) ? 1 : 0);
-                    } else {
-                        Set(next_, r, c, (n == 3) ? 1 : 0);
-                    }
-                }
-            }
-
-            // Swap grids
-            uint8_t *tmp = grid_;
-            grid_ = next_;
-            next_ = tmp;
-
-            // Auto-reset on stale state
-            int pop = Population();
-            if (pop == last_pop) stale_count++;
-            else stale_count = 0;
-            last_pop = pop;
-
-            if (stale_count > 200 || pop == 0) {
-                Randomize();
-                stale_count = 0;
-            }
-
-            usleep(delay_ms_ * 1000);
-        }
-    }
-
-private:
-    uint8_t &At(uint8_t *g, int r, int c) {
-        return g[r * cols_ + c];
-    }
-
-    void Set(uint8_t *g, int r, int c, uint8_t v) {
-        g[r * cols_ + c] = v;
-    }
-
-    int CountNeighbors(int r, int c) {
-        int count = 0;
-        for (int dr = -1; dr <= 1; dr++) {
-            for (int dc = -1; dc <= 1; dc++) {
-                if (dr == 0 && dc == 0) continue;
-                int nr = (r + dr + rows_) % rows_;
-                int nc = (c + dc + cols_) % cols_;
-                count += At(grid_, nr, nc);
-            }
-        }
-        return count;
-    }
-
-    int Population() {
-        int count = 0;
-        for (int i = 0; i < rows_ * cols_; i++)
-            count += grid_[i];
-        return count;
-    }
-
-    void Randomize() {
-        for (int i = 0; i < rows_ * cols_; i++) {
-            grid_[i] = (static_cast<float>(rand()) / RAND_MAX < density_) ? 1 : 0;
-        }
-    }
-
-    int rows_, cols_;
-    int delay_ms_;
-    float density_;
-    uint8_t *grid_;
-    uint8_t *next_;
+// --- Star field ---
+struct Star {
+    int row, col;
+    double phase;
 };
+
+static std::vector<Star> stars;
+static double stars_start_time;
+
+static void init_stars(int y_offset, int char_height) {
+    stars_start_time = now_seconds();
+    stars.clear();
+    int text_top = y_offset;
+    int text_bot = y_offset + char_height;
+
+    // Collect sky pixels
+    std::vector<std::pair<int,int>> sky;
+    for (int r = 0; r < ROWS; r++) {
+        if (r >= text_top && r < text_bot) continue;
+        for (int c = 0; c < COLS; c++) {
+            sky.push_back({r, c});
+        }
+    }
+
+    // Random sample
+    for (int i = 0; i < NUM_STARS && !sky.empty(); i++) {
+        int idx = rand() % sky.size();
+        Star s;
+        s.row = sky[idx].first;
+        s.col = sky[idx].second;
+        s.phase = ((double)rand() / RAND_MAX) * 2.0 * M_PI;
+        stars.push_back(s);
+        sky.erase(sky.begin() + idx);
+    }
+}
+
+static double star_brightness(const Star &s) {
+    double t = now_seconds() - stars_start_time;
+    double val = sin(2.0 * M_PI * TWINKLE_HZ * t + s.phase);
+    return val > 0.0 ? val : 0.0;
+}
+
+// --- Grid helpers ---
+
+static inline uint8_t &at(uint8_t *g, int r, int c) {
+    return g[r * COLS + c];
+}
+
+static int count_neighbors(uint8_t *g, int r, int c) {
+    int count = 0;
+    for (int dr = -1; dr <= 1; dr++) {
+        for (int dc = -1; dc <= 1; dc++) {
+            if (dr == 0 && dc == 0) continue;
+            int nr = (r + dr + ROWS) % ROWS;
+            int nc = (c + dc + COLS) % COLS;
+            count += at(g, nr, nc);
+        }
+    }
+    return count;
+}
+
+static void next_generation(uint8_t *grid, uint8_t *next) {
+    for (int r = 0; r < ROWS; r++) {
+        for (int c = 0; c < COLS; c++) {
+            int n = count_neighbors(grid, r, c);
+            if (at(grid, r, c))
+                at(next, r, c) = (n == 2 || n == 3) ? 1 : 0;
+            else
+                at(next, r, c) = (n == 3) ? 1 : 0;
+        }
+    }
+}
+
+static int population(uint8_t *g) {
+    int count = 0;
+    for (int i = 0; i < ROWS * COLS; i++) count += g[i];
+    return count;
+}
+
+static void randomize(uint8_t *g) {
+    for (int i = 0; i < ROWS * COLS; i++)
+        g[i] = ((float)rand() / RAND_MAX < INITIAL_DENSITY) ? 1 : 0;
+}
+
+// --- Rendering ---
+
+static void render_grid(FrameCanvas *canvas, uint8_t *g) {
+    for (int r = 0; r < ROWS; r++) {
+        for (int c = 0; c < COLS; c++) {
+            if (at(g, r, c))
+                canvas->SetPixel(c, r, ALIVE_R, ALIVE_G, ALIVE_B);
+            else
+                canvas->SetPixel(c, r, DEAD_R, DEAD_G, DEAD_B);
+        }
+    }
+}
+
+static void render_night_frame(FrameCanvas *canvas,
+                                const std::vector<std::vector<uint8_t>> &bitmap,
+                                int x_off, int y_off,
+                                uint8_t bg_r, uint8_t bg_g, uint8_t bg_b,
+                                double star_mult) {
+    // Build text pixel set
+    std::set<std::pair<int,int>> text_pixels;
+    for (int row = 0; row < (int)bitmap.size(); row++) {
+        int py = y_off + row;
+        if (py < 0 || py >= ROWS) continue;
+        for (int col = 0; col < (int)bitmap[row].size(); col++) {
+            int px = x_off + col;
+            if (px < 0 || px >= COLS) continue;
+            if (bitmap[row][col])
+                text_pixels.insert({py, px});
+        }
+    }
+
+    // Fill background
+    for (int r = 0; r < ROWS; r++)
+        for (int c = 0; c < COLS; c++)
+            canvas->SetPixel(c, r, bg_r, bg_g, bg_b);
+
+    // Stars
+    if (star_mult > 0.01) {
+        for (const auto &s : stars) {
+            if (text_pixels.count({s.row, s.col})) continue;
+            double b = star_brightness(s) * star_mult;
+            if (b > 0.05) {
+                canvas->SetPixel(s.col, s.row,
+                    lerp(bg_r, STAR_R, b),
+                    lerp(bg_g, STAR_G, b),
+                    lerp(bg_b, STAR_B, b));
+            }
+        }
+    }
+
+    // Text
+    for (const auto &p : text_pixels)
+        canvas->SetPixel(p.second, p.first, ALIVE_R, ALIVE_G, ALIVE_B);
+}
+
+// --- Ticker ---
+
+static int scroll_delay_for_index(int line_index) {
+    // Each line decelerates by φ raised to its exponent
+    return (int)(SCROLL_BASE_DELAY_US * pow(PHI, SCROLL_EXPONENTS[line_index]));
+}
+
+static FrameCanvas *scroll_line(RGBMatrix *matrix, FrameCanvas *canvas,
+                                 const char *text, int y_offset,
+                                 int line_index = 0) {
+    auto bitmap = text_to_bitmap(text);
+    int text_width = bitmap.empty() ? 0 : (int)bitmap[0].size();
+    int delay = scroll_delay_for_index(line_index);
+
+    for (int x = COLS; x > -text_width && !interrupted; x--) {
+        render_night_frame(canvas, bitmap, x, y_offset,
+                            NIGHT_R, NIGHT_G, NIGHT_B, 1.0);
+        canvas = matrix->SwapOnVSync(canvas);
+        usleep(delay);
+    }
+    return canvas;
+}
+
+static FrameCanvas *pause_with_stars(RGBMatrix *matrix, FrameCanvas *canvas,
+                                      int y_offset, int duration_us) {
+    std::vector<std::vector<uint8_t>> empty_bitmap;
+    int elapsed = 0;
+    int step = 80000; // 80ms
+    while (elapsed < duration_us && !interrupted) {
+        render_night_frame(canvas, empty_bitmap, 0, y_offset,
+                            NIGHT_R, NIGHT_G, NIGHT_B, 1.0);
+        canvas = matrix->SwapOnVSync(canvas);
+        int wait = (duration_us - elapsed < step) ? (duration_us - elapsed) : step;
+        usleep(wait);
+        elapsed += wait;
+    }
+    return canvas;
+}
+
+static FrameCanvas *scroll_final_and_dawn(RGBMatrix *matrix, FrameCanvas *canvas,
+                                           const char *text, int y_offset,
+                                           uint8_t *grid,
+                                           int line_index = 0) {
+    std::string full(text);
+    std::string find_text = "find";
+    auto bitmap = text_to_bitmap(full);
+
+    int find_start = ((int)full.size() - (int)find_text.size()) * CELL_WIDTH;
+    int x_stop = -find_start;
+
+    // Scroll until "find" centered
+    int delay = scroll_delay_for_index(line_index);
+    for (int x = COLS; x > x_stop && !interrupted; x--) {
+        render_night_frame(canvas, bitmap, x, y_offset,
+                            NIGHT_R, NIGHT_G, NIGHT_B, 1.0);
+        canvas = matrix->SwapOnVSync(canvas);
+        usleep(delay);
+    }
+
+    // Dawn transition
+    auto find_bitmap = text_to_bitmap(find_text);
+    printf("  Dawn transition (%d steps)...\n", DAWN_STEPS);
+    for (int step = 0; step < DAWN_STEPS && !interrupted; step++) {
+        double t = (double)step / DAWN_STEPS;
+        uint8_t bg_r = lerp(NIGHT_R, DEAD_R, t);
+        uint8_t bg_g = lerp(NIGHT_G, DEAD_G, t);
+        uint8_t bg_b = lerp(NIGHT_B, DEAD_B, t);
+        double star_fade = 1.0 - t;
+        render_night_frame(canvas, find_bitmap, 0, y_offset,
+                            bg_r, bg_g, bg_b, star_fade);
+        canvas = matrix->SwapOnVSync(canvas);
+        usleep(DAWN_STEP_US);
+    }
+
+    // Build seed grid
+    bitmap_to_grid(find_bitmap, grid, COLS, ROWS, 0, y_offset);
+    return canvas;
+}
+
+// --- Main ---
 
 int main(int argc, char *argv[]) {
     srand(time(nullptr));
     signal(SIGINT, sigint_handler);
 
     RGBMatrix::Options defaults;
-    defaults.rows = 64;
-    defaults.cols = 64;
+    defaults.rows = ROWS;
+    defaults.cols = COLS;
     defaults.hardware_mapping = "adafruit-hat";
+    defaults.brightness = 50;
+    defaults.pwm_lsb_nanoseconds = 130;
 
     RuntimeOptions runtime;
     runtime.gpio_slowdown = 2;
 
-    RGBMatrix *matrix = RGBMatrix::CreateFromFlags(&argc, &argv, &defaults, &runtime);
-    if (matrix == nullptr) {
+    RGBMatrix *matrix = RGBMatrix::CreateFromFlags(&argc, &argv,
+                                                     &defaults, &runtime);
+    if (!matrix) {
         fprintf(stderr, "Could not create matrix. Check your flags.\n");
         return 1;
     }
 
-    printf("Game of Life running on %dx%d. Press Ctrl+C to stop.\n",
-           matrix->width(), matrix->height());
+    FrameCanvas *canvas = matrix->CreateFrameCanvas();
+    int y_offset = (ROWS - CHAR_HEIGHT) / 2;
 
-    GameOfLife *life = new GameOfLife(matrix, 100);
-    life->Start();
+    uint8_t *grid = new uint8_t[ROWS * COLS]();
+    uint8_t *next = new uint8_t[ROWS * COLS]();
 
-    while (!interrupted) {
-        sleep(1);
+    // Init stars
+    init_stars(y_offset, CHAR_HEIGHT);
+
+    // --- Startup Ticker ---
+    printf("=== Startup Ticker ===\n\n");
+
+    // Stargazing pause
+    printf("  Stargazing...\n");
+    canvas = pause_with_stars(matrix, canvas, y_offset, STARGAZE_US);
+
+    for (int i = 0; i < NUM_LINES - 1 && !interrupted; i++) {
+        printf("  Scrolling: \"%s\"\n", TICKER_LINES[i]);
+        canvas = scroll_line(matrix, canvas, TICKER_LINES[i], y_offset, i);
+        canvas = pause_with_stars(matrix, canvas, y_offset, PAUSE_BETWEEN_US[i]);
     }
 
-    life->Stop();
-    delete life;
-    delete matrix;
+    if (!interrupted) {
+        printf("  Scrolling: \"%s\" (stopping on \"find\")\n",
+               TICKER_LINES[NUM_LINES - 1]);
+        canvas = scroll_final_and_dawn(matrix, canvas,
+                                        TICKER_LINES[NUM_LINES - 1],
+                                        y_offset, grid,
+                                        NUM_LINES - 1);
+    }
 
-    printf("\nDone.\n");
+    // --- Game of Life ---
+    printf("\n=== Dissolving ===\n");
+
+    int gen_count = 0;
+    int stale_count = 0;
+    int last_pop = 0;
+    bool dissolving = true;
+    int circadian_pos = CIRCADIAN_CENTER;
+
+    while (!interrupted) {
+        render_grid(canvas, grid);
+        canvas = matrix->SwapOnVSync(canvas);
+
+        next_generation(grid, next);
+        uint8_t *tmp = grid;
+        grid = next;
+        next = tmp;
+        gen_count++;
+
+        int pop = population(grid);
+        if (pop == last_pop) stale_count++;
+        else stale_count = 0;
+        last_pop = pop;
+
+        if (gen_count <= 20 || gen_count % 25 == 0)
+            printf("  Gen %d: pop=%d\n", gen_count, pop);
+
+        if (dissolving && gen_count >= DISSOLVE_GENS) {
+            printf("  Dissolve complete, reseeding\n");
+            randomize(grid);
+            dissolving = false;
+            stale_count = 0;
+        }
+
+        if (!dissolving && (stale_count >= STALE_RESET_GENS || pop == 0)) {
+            printf("  Resetting at gen %d (pop=%d)\n", gen_count, pop);
+            randomize(grid);
+            stale_count = 0;
+        }
+
+        // Circadian rhythm: random walk every CIRCADIAN_STRIDE gens
+        if (gen_count % CIRCADIAN_STRIDE == 0) {
+            int move = (rand() % 3) - 1;  // -1, 0, or 1
+            int new_pos = circadian_pos + move;
+            if (new_pos < 0) new_pos = 1;
+            else if (new_pos >= CIRCADIAN_COUNT) new_pos = CIRCADIAN_COUNT - 2;
+            circadian_pos = new_pos;
+            if (move != 0) {
+                int bpm = 60000000 / CIRCADIAN_STEPS[new_pos];
+                printf("  Circadian: step %d (%dms, ~%d BPM)\n",
+                       new_pos, CIRCADIAN_STEPS[new_pos] / 1000, bpm);
+            }
+        }
+
+        usleep(CIRCADIAN_STEPS[circadian_pos]);
+    }
+
+    printf("\nStopped after %d generations.\n", gen_count);
+    matrix->Clear();
+    delete[] grid;
+    delete[] next;
+    delete matrix;
     return 0;
 }
