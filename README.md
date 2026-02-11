@@ -108,7 +108,7 @@ Timing derives from two rhythms. The **breath** (5s twinkle cycle) governs pause
 | `SCROLL_EXPONENTS` | 0, 1, 1.5 | φ⁰=47, φ¹=76, φ^1.5=101 ms/px |
 | `CIRCADIAN_STEPS` | 600–1034ms | 9 tempo steps, 58–100 BPM |
 | `CIRCADIAN_STRIDE` | 8 gens | Random walk interval (~6s at center) |
-| `DISSOLVE_GENS` | 16 | ~12s of letter dissolution |
+| `DISSOLVE_GENS` | 12 | ~9s — reseed while the ghost lingers |
 | `STALE_RESET_GENS` | 50 | ~38s before auto-reseed |
 
 ---

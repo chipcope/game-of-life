@@ -66,7 +66,7 @@ DAWN_STEPS = 50
 DAWN_STEP_DELAY = SEED_HOLD / DAWN_STEPS
 
 # --- Simulation ---
-DISSOLVE_GENS = 16
+DISSOLVE_GENS = 12
 
 # --- Circadian Rhythm ---
 #   Random walk on 9 steps, centered on 750ms (80 BPM).
