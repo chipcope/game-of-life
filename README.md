@@ -1,6 +1,6 @@
 # Conway's Game of Life on a 64x64 RGB LED Matrix
 
-A medieval blackletter ticker scrolls a cryptic message, lands on the word **"find"**, holds — then the letters dissolve under Game of Life rules. The simulation runs forever at a slow, creeping-vine pace.
+A medieval blackletter ticker scrolls a cryptic message, lands on the word **"find"**, holds — then the letters dissolve under Game of Life rules. The simulation runs forever, its pace drifting with a circadian rhythm.
 
 ## Quick Start
 
@@ -29,16 +29,16 @@ sudo ./game-of-life
 
 ## What Happens
 
-All timing derives from a single **750ms heartbeat** — one breath per frame.
+Timing derives from two rhythms: the **breath** (5-second twinkle cycle) and the **heartbeat** (750ms generation tick, ~80 BPM). Scroll speed decelerates line-to-line by φ (golden ratio).
 
-1. **Night Sky** — the display starts black with 10 twinkling stars (5-second cycle, cool white)
-2. **Ticker** scrolls three lines in gothic blackletter at 47ms/pixel (one character cell per heartbeat):
-   - *Fate isnt what were up against*
-   - *Theres no design*
-   - *No flaw to find*
-3. **Dawn** — "find" holds for 5 heartbeats (3.75s) as the background transitions from black → primary blue. Stars fade out.
-4. **Dissolve** — Game of Life rules kick in at 750ms/gen. The letters shatter into green cells on a blue sea.
-5. **Cruise** — simulation runs indefinitely at 750ms/gen. Auto-reseeds after 50 stale generations.
+1. **Stargazing** — 5 seconds of pure night sky. 12 stars twinkle on black. One full breath before anything happens.
+2. **Ticker** scrolls three lines in gothic blackletter, each line slower than the last (φ deceleration: 47ms → 76ms → 101ms per pixel):
+   - *Fate isnt what were up against* — brisk
+   - *Theres no design* — easing (¼-breath pause before)
+   - *No flaw to find* — drifting (½-breath pause before)
+3. **Dawn** — "find" holds for 7.5s (1½ breaths) as the background transitions from black → primary blue. Stars fade out.
+4. **Dissolve** — Game of Life rules kick in. The letters shatter into green cells on a blue sea over 16 generations.
+5. **Cruise** — simulation runs indefinitely with a **circadian rhythm**: a random walk across 9 tempo steps (58–100 BPM) that drifts every 8 generations, bell-curving around 80 BPM. Auto-reseeds after 50 stale generations.
 
 **Colors:** Primary green (#00ff00) alive cells on primary blue (#0000ff) background. The green is the one constant as the world transforms around it.
 
@@ -54,7 +54,7 @@ All timing derives from a single **750ms heartbeat** — one breath per frame.
 | **5V 4A+ Power Supply** | Powers Pi + panel via Bonnet | $10-15 |
 | **16GB+ microSD Card** | Raspberry Pi OS Lite (64-bit) | $8-12 |
 | **Frametory 8×8 Shadow Box** | 2" depth, front-opening, tan | ~$18 |
-| **Diffusion Acrylic 12×12"** | Adafruit black LED diffusion | $5 |
+| **Diffusion Acrylic 12×12"** | Frosted matte P95 (Amazon) or Adafruit black LED | ~$5–8 |
 
 See [docs/ENCLOSURE.md](docs/ENCLOSURE.md) for the full enclosure build guide.
 
@@ -95,17 +95,20 @@ sudo make install-python PYTHON=$(which python3)
 
 ## Configuration
 
-All timing derives from a single heartbeat constant (750ms). Tunable at the top of each file:
+Timing derives from two rhythms. The **breath** (5s twinkle cycle) governs pauses and transitions. The **heartbeat** (~750ms) governs generation ticks, modulated by a circadian random walk. Scroll speed decelerates by φ (golden ratio).
 
 | Parameter | Value | Derivation |
 |-----------|-------|------------|
-| `HEARTBEAT_MS` | 750 | One breath per frame |
-| `SCROLL_DELAY` | 47ms/px | 16px cell ÷ 750ms = 1 char per heartbeat |
-| `PAUSE_BETWEEN_LINES` | 750ms | 1 heartbeat |
-| `SEED_HOLD` | 3750ms | 5 heartbeats (dawn transition) |
-| `GEN_DELAY` | 750ms | Every generation is one breath |
-| `DISSOLVE_GENS` | 20 | 20 heartbeats = 15s of dissolution |
-| `STALE_RESET_GENS` | 50 | 37.5s before auto-reseed |
+| `TWINKLE` | 5s cycle | The fundamental breath |
+| `STARGAZE` | 5000ms | 1 breath — opening pause |
+| `PAUSE_BETWEEN` | 1250, 2500ms | ¼, ½ breath between lines |
+| `SEED_HOLD` | 7500ms | 1½ breaths — "find" hold + dawn |
+| `SCROLL_BASE_DELAY` | 47ms/px | Fastest line (line 1) |
+| `SCROLL_EXPONENTS` | 0, 1, 1.5 | φ⁰=47, φ¹=76, φ^1.5=101 ms/px |
+| `CIRCADIAN_STEPS` | 600–1034ms | 9 tempo steps, 58–100 BPM |
+| `CIRCADIAN_STRIDE` | 8 gens | Random walk interval (~6s at center) |
+| `DISSOLVE_GENS` | 16 | ~12s of letter dissolution |
+| `STALE_RESET_GENS` | 50 | ~38s before auto-reseed |
 
 ---
 
