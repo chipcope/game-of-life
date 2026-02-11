@@ -56,10 +56,7 @@ TICKER_LINES = [
 ]
 SCROLL_BASE_DELAY = 0.047
 SCROLL_EXPONENTS = [0, 1, 1.5]        # φ exponents per line: 1×, φ, φ^1.5
-PAUSE_BETWEEN_LINES = [
-    TWINKLE_PERIOD / 4,               # 1.25s — quarter breath after line 1
-    TWINKLE_PERIOD / 2,               # 2.50s — half breath after line 2
-]
+PAUSE_BETWEEN_LINES = HEARTBEAT       # one heartbeat between lines
 STARGAZE = TWINKLE_PERIOD             # one full breath before first scroll
 SEED_HOLD = TWINKLE_PERIOD * 1.5     # 7.5s — breath and a half on "find"
 TEXT_COLOR = ALIVE_COLOR
@@ -224,7 +221,7 @@ def startup_sequence(matrix, canvas):
         canvas = scroll_line(matrix, canvas, line, y_offset, stars,
                               line_index=i)
         # Pause with twinkling stars
-        pause_end = time.time() + PAUSE_BETWEEN_LINES[i]
+        pause_end = time.time() + PAUSE_BETWEEN_LINES
         while time.time() < pause_end:
             render_night_frame(canvas, [[]], 0, y_offset, stars)
             canvas = matrix.SwapOnVSync(canvas)
