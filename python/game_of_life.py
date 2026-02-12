@@ -68,7 +68,7 @@ DAWN_STEP_DELAY = SEED_HOLD / DAWN_STEPS
 
 # --- Simulation ---
 DISSOLVE_PHASE_GENS = 4
-DISSOLVE_TOTAL_GENS = 32              # 8 phases × 4 gens
+DISSOLVE_TOTAL_GENS = 20              # 5 phases × 4 gens
 
 # Last-word vertical positions
 FIND_Y_TOP = 1
@@ -77,15 +77,12 @@ FIND_Y_BOT = 43
 FIND_Y_UPPER_BRIDGE = 11             # centered on top/mid boundary (row 21)
 FIND_Y_LOWER_BRIDGE = 32             # centered on mid/bot boundary (row 42)
 
-# Dissolve schedule: 7 overlays after the initial dawn seed (phase 1)
+# Dissolve schedule: 4 overlays after the initial dawn seed (phase 1)
 DISSOLVE_SCHEDULE = [
     (DISSOLVE_PHASE_GENS * 1, FIND_Y_TOP),           # phase 2
     (DISSOLVE_PHASE_GENS * 2, FIND_Y_BOT),           # phase 3
     (DISSOLVE_PHASE_GENS * 3, FIND_Y_UPPER_BRIDGE),  # phase 4
     (DISSOLVE_PHASE_GENS * 4, FIND_Y_LOWER_BRIDGE),  # phase 5
-    (DISSOLVE_PHASE_GENS * 5, FIND_Y_MID),           # phase 6 (center repeat)
-    (DISSOLVE_PHASE_GENS * 6, FIND_Y_TOP),           # phase 7 (top repeat)
-    (DISSOLVE_PHASE_GENS * 7, FIND_Y_BOT),           # phase 8 (bottom repeat)
 ]
 
 # --- Circadian Rhythm ---
