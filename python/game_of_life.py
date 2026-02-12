@@ -291,13 +291,13 @@ def main():
     print("=== Startup Ticker ===")
     canvas, grid = startup_sequence(matrix, canvas)
 
-    print("\n=== Dissolving (triple last word) ===")
+    print("\n=== Dissolving (cascade) ===")
     find_bitmap = text_to_bitmap("find")
     gen_count = 0
     stale_count = 0
     last_pop = 0
     dissolving = True
-    dissolve_phase = 1  # 1=center only, 2–8=overlays
+    dissolve_phase = 1  # 1=center only, 2–5=overlays
     circadian_pos = CIRCADIAN_CENTER
 
     try:

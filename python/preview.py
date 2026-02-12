@@ -351,12 +351,12 @@ class GameOfLife:
         scroll_next(0)
 
     def start_dissolve(self):
-        print("\n=== Dissolving (triple last word) ===")
+        print("\n=== Dissolving (cascade) ===")
         self.gen_count = 0
         self.stale_count = 0
         self.last_pop = 0
         self.dissolving = True
-        self.dissolve_phase = 1  # 1=center only, 2–8=overlays
+        self.dissolve_phase = 1  # 1=center only, 2–5=overlays
         self.find_bitmap = text_to_bitmap("find")
         self.simulation_step()
 
