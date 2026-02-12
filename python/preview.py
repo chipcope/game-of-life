@@ -70,7 +70,7 @@ SCROLL_BASE_DELAY_MS = 47             # px delay for longest line
 SCROLL_EXPONENTS = [0, 1, 1.5]        # φ exponents per line: 1×, φ, φ^1.5
 PAUSE_BETWEEN_MS = HEARTBEAT_MS       # one heartbeat between lines
 STARGAZE_MS = TWINKLE_MS              # one full breath before first scroll
-SEED_HOLD_MS = TWINKLE_MS + TWINKLE_MS // 2  # 7.5s — breath and a half on "find"
+SEED_HOLD_MS = TWINKLE_MS + TWINKLE_MS // 2  # 7.5s — breath and a half on last word
 
 # --- Dawn transition ---
 DAWN_STEPS = 50
@@ -82,7 +82,7 @@ DISSOLVE_TOTAL_GENS = 12              # 3 phases × 4 gens
 INITIAL_DENSITY = 0.20
 STALE_RESET_GENS = 50
 
-# Triple "find" vertical positions (divide 64 rows into thirds)
+# Triple last-word vertical positions (divide 64 rows into thirds)
 FIND_Y_TOP = 1
 FIND_Y_MID = 22                       # == (ROWS - CHAR_HEIGHT) // 2
 FIND_Y_BOT = 43
@@ -276,13 +276,13 @@ class GameOfLife:
         step(COLS)
 
     def dawn_transition(self, callback):
-        """Sunrise: black→blue background, stars fade out, 'find' stays."""
+        """Sunrise: black→blue background, stars fade out, last word stays."""
         find_bitmap = text_to_bitmap("find")
         step_count = [0]
 
         def dawn_step():
             if step_count[0] >= DAWN_STEPS:
-                # Build seed grid from "find"
+                # Build seed grid from last word
                 self.grid = bitmap_to_grid(find_bitmap, COLS, ROWS,
                                             x_offset=0,
                                             y_offset=self.y_offset)
@@ -335,14 +335,14 @@ class GameOfLife:
                     line_index=idx
                 )
             else:
-                print(f'  Scrolling: "{lines[idx]}" (stopping on "find")')
+                print(f'  Scrolling: "{lines[idx]}" (stopping on last word)')
                 self.scroll_final_line(lines[idx], self.start_dissolve,
                                         line_index=idx)
 
         scroll_next(0)
 
     def start_dissolve(self):
-        print("\n=== Dissolving (triple find) ===")
+        print("\n=== Dissolving (triple last word) ===")
         self.gen_count = 0
         self.stale_count = 0
         self.last_pop = 0
@@ -369,18 +369,18 @@ class GameOfLife:
             if self.gen_count <= 30 or self.gen_count % 25 == 0:
                 print(f"  Gen {self.gen_count}: pop={current_pop}")
 
-            # Phased dissolve: overlay new "find" at phase boundaries
+            # Phased dissolve: overlay new last word at phase boundaries
             if self.dissolving:
                 if (self.dissolve_phase == 1
                         and self.gen_count >= DISSOLVE_PHASE_GENS):
-                    print(f"  Phase 2: overlaying 'find' at y={FIND_Y_TOP}")
+                    print(f"  Phase 2: overlaying last word at y={FIND_Y_TOP}")
                     overlay_bitmap_to_grid(self.find_bitmap, self.grid,
                                            x_offset=0, y_offset=FIND_Y_TOP)
                     self.dissolve_phase = 2
                     self.stale_count = 0
                 elif (self.dissolve_phase == 2
                         and self.gen_count >= DISSOLVE_PHASE_GENS * 2):
-                    print(f"  Phase 3: overlaying 'find' at y={FIND_Y_BOT}")
+                    print(f"  Phase 3: overlaying last word at y={FIND_Y_BOT}")
                     overlay_bitmap_to_grid(self.find_bitmap, self.grid,
                                            x_offset=0, y_offset=FIND_Y_BOT)
                     self.dissolve_phase = 3

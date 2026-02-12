@@ -2,7 +2,7 @@
  * Medieval Blackletter Bubble Font for 64x64 RGB LED Matrix.
  *
  * Each character is 14px wide x 20px tall, displayed in a 16px cell (2px gap).
- * "find" = 4 chars x 16px = 64px (fills panel width exactly).
+ * Last word = 4 chars x 16px = 64px (fills panel width exactly).
  *
  * Style: Gothic blackletter with pointed serifs, diamond dot on 'i',
  * thick-thin stroke contrast, hand-hewn character.

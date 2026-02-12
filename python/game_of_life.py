@@ -59,7 +59,7 @@ SCROLL_BASE_DELAY = 0.047
 SCROLL_EXPONENTS = [0, 1, 1.5]        # φ exponents per line: 1×, φ, φ^1.5
 PAUSE_BETWEEN_LINES = HEARTBEAT       # one heartbeat between lines
 STARGAZE = TWINKLE_PERIOD             # one full breath before first scroll
-SEED_HOLD = TWINKLE_PERIOD * 1.5     # 7.5s — breath and a half on "find"
+SEED_HOLD = TWINKLE_PERIOD * 1.5     # 7.5s — breath and a half on last word
 TEXT_COLOR = ALIVE_COLOR
 
 # --- Dawn ---
@@ -70,7 +70,7 @@ DAWN_STEP_DELAY = SEED_HOLD / DAWN_STEPS
 DISSOLVE_PHASE_GENS = 4
 DISSOLVE_TOTAL_GENS = 12              # 3 phases × 4 gens
 
-# Triple "find" vertical positions (divide 64 rows into thirds)
+# Triple last-word vertical positions (divide 64 rows into thirds)
 FIND_Y_TOP = 1
 FIND_Y_MID = 22                       # == (ROWS - CHAR_HEIGHT) // 2
 FIND_Y_BOT = 43
@@ -176,7 +176,7 @@ def scroll_final_and_dawn(matrix, canvas, text, y_offset, stars, line_index=0):
     x_stop = -find_start
     delay = SCROLL_BASE_DELAY * PHI ** SCROLL_EXPONENTS[line_index]
 
-    # Scroll until "find" is centered
+    # Scroll until last word is centered
     x = COLS
     while x > x_stop:
         render_night_frame(canvas, bitmap, x, y_offset, stars)
@@ -234,7 +234,7 @@ def startup_sequence(matrix, canvas):
             canvas = matrix.SwapOnVSync(canvas)
             time.sleep(0.08)
 
-    print(f'  Scrolling: "{TICKER_LINES[-1]}" (stopping on "find")')
+    print(f'  Scrolling: "{TICKER_LINES[-1]}" (stopping on last word)')
     canvas, grid = scroll_final_and_dawn(
         matrix, canvas, TICKER_LINES[-1], y_offset, stars,
         line_index=len(TICKER_LINES) - 1
@@ -282,7 +282,7 @@ def main():
     print("=== Startup Ticker ===")
     canvas, grid = startup_sequence(matrix, canvas)
 
-    print("\n=== Dissolving (triple find) ===")
+    print("\n=== Dissolving (triple last word) ===")
     find_bitmap = text_to_bitmap("find")
     gen_count = 0
     stale_count = 0
@@ -307,18 +307,18 @@ def main():
             if gen_count <= 30 or gen_count % 25 == 0:
                 print(f"  Gen {gen_count}: pop={current_pop}")
 
-            # Phased dissolve: overlay new "find" at phase boundaries
+            # Phased dissolve: overlay new last word at phase boundaries
             if dissolving:
                 if (dissolve_phase == 1
                         and gen_count >= DISSOLVE_PHASE_GENS):
-                    print(f"  Phase 2: overlaying 'find' at y={FIND_Y_TOP}")
+                    print(f"  Phase 2: overlaying last word at y={FIND_Y_TOP}")
                     overlay_bitmap_to_grid(find_bitmap, grid,
                                            x_offset=0, y_offset=FIND_Y_TOP)
                     dissolve_phase = 2
                     stale_count = 0
                 elif (dissolve_phase == 2
                         and gen_count >= DISSOLVE_PHASE_GENS * 2):
-                    print(f"  Phase 3: overlaying 'find' at y={FIND_Y_BOT}")
+                    print(f"  Phase 3: overlaying last word at y={FIND_Y_BOT}")
                     overlay_bitmap_to_grid(find_bitmap, grid,
                                            x_offset=0, y_offset=FIND_Y_BOT)
                     dissolve_phase = 3
