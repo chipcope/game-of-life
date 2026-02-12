@@ -34,7 +34,7 @@ Timing derives from two rhythms: the **breath** (5-second twinkle cycle) and the
 1. **Stargazing** — 5 seconds of pure night sky. 12 stars twinkle on black. One full breath before anything happens.
 2. **Ticker** scrolls three lines of a cryptic message in gothic blackletter, each line slower than the last (φ deceleration: 47ms → 76ms → 97ms per pixel). One heartbeat pause between each line.
 3. **Dawn** — the last word holds for 7.5s (1½ breaths) as the background transitions from black → primary blue. Stars fade out.
-4. **Dissolve** — Five-phase reveal over 20 generations: the last word dissolves, then reappears at different vertical positions every 4 generations — top, bottom, upper bridge, lower bridge. Each overlay dissolves into the chaos of the previous ones. The scattered remnants become the simulation seed — no random reseed.
+4. **Dissolve** — Accelerating cascade over 12 generations: the last word dissolves, then reappears at different vertical positions with shrinking gaps (4, 3, 2, 1 gens) — a countdown that mirrors the ticker's φ-deceleration in reverse. The heartbeat holds steady at 750ms during the cascade for deterministic timing. The scattered remnants become the simulation seed — no random reseed.
 5. **Cruise** — simulation runs indefinitely with a **circadian rhythm**: a random walk across 9 tempo steps (58–100 BPM) that drifts every 8 generations, bell-curving around 80 BPM. Auto-reseeds after 50 stale generations.
 
 **Colors:** Primary green (#00ff00) alive cells on primary blue (#0000ff) background. The green is the one constant as the world transforms around it.
@@ -104,8 +104,7 @@ Timing derives from two rhythms. The **breath** (5s twinkle cycle) governs pause
 | `SCROLL_EXPONENTS` | 0, 1, 1.5 | φ⁰=47, φ¹=76, φ^1.5≈97 ms/px |
 | `CIRCADIAN_STEPS` | 600–1034ms | 9 tempo steps, 58–100 BPM |
 | `CIRCADIAN_STRIDE` | 8 gens | Random walk interval (~6s at center) |
-| `DISSOLVE_PHASE_GENS` | 4 | Generations per phase (5 phases) |
-| `DISSOLVE_TOTAL_GENS` | 20 | ~15s — 5-phase last-word dissolve |
+| `DISSOLVE_TOTAL_GENS` | 12 | ~9s — accelerating cascade (gaps: 4,3,2,1) |
 | `FIND_Y_*` | 1/11/22/32/43 | Vertical positions for dissolve overlays |
 | `STALE_RESET_GENS` | 50 | ~38s before auto-reseed |
 

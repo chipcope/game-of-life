@@ -77,8 +77,7 @@ DAWN_STEPS = 50
 DAWN_STEP_MS = SEED_HOLD_MS // DAWN_STEPS  # 150ms per step
 
 # --- Simulation ---
-DISSOLVE_PHASE_GENS = 4
-DISSOLVE_TOTAL_GENS = 20              # 5 phases × 4 gens
+DISSOLVE_TOTAL_GENS = 12              # accelerating cascade
 INITIAL_DENSITY = 0.20
 STALE_RESET_GENS = 50
 
@@ -89,12 +88,12 @@ FIND_Y_BOT = 43
 FIND_Y_UPPER_BRIDGE = 11             # centered on top/mid boundary (row 21)
 FIND_Y_LOWER_BRIDGE = 32             # centered on mid/bot boundary (row 42)
 
-# Dissolve schedule: 4 overlays after the initial dawn seed (phase 1)
+# Dissolve schedule: accelerating cascade (gaps: 4, 3, 2, 1 gens)
 DISSOLVE_SCHEDULE = [
-    (DISSOLVE_PHASE_GENS * 1, FIND_Y_TOP),           # phase 2
-    (DISSOLVE_PHASE_GENS * 2, FIND_Y_BOT),           # phase 3
-    (DISSOLVE_PHASE_GENS * 3, FIND_Y_UPPER_BRIDGE),  # phase 4
-    (DISSOLVE_PHASE_GENS * 4, FIND_Y_LOWER_BRIDGE),  # phase 5
+    ( 4, FIND_Y_TOP),                 # phase 2 (gap: 4)
+    ( 7, FIND_Y_BOT),                 # phase 3 (gap: 3)
+    ( 9, FIND_Y_UPPER_BRIDGE),        # phase 4 (gap: 2)
+    (10, FIND_Y_LOWER_BRIDGE),        # phase 5 (gap: 1)
 ]
 
 # --- Circadian Rhythm ---
@@ -405,20 +404,21 @@ class GameOfLife:
                     self.grid = random_grid()
                     self.stale_count = 0
 
-            # Circadian rhythm: random walk every CIRCADIAN_STRIDE gens
-            if self.gen_count % CIRCADIAN_STRIDE == 0:
-                move = random.choice([-1, 0, 1])
-                new_pos = self.circadian_pos + move
-                # Reflect at boundaries
-                if new_pos < 0:
-                    new_pos = 1
-                elif new_pos >= len(CIRCADIAN_STEPS):
-                    new_pos = len(CIRCADIAN_STEPS) - 2
-                self.circadian_pos = new_pos
-                if move != 0:
-                    bpm = round(60000 / CIRCADIAN_STEPS[new_pos])
-                    print(f"  Circadian: step {new_pos} "
-                          f"({CIRCADIAN_STEPS[new_pos]}ms, ~{bpm} BPM)")
+                # Circadian rhythm: random walk every CIRCADIAN_STRIDE gens
+                # (frozen during dissolve for deterministic cascade timing)
+                if self.gen_count % CIRCADIAN_STRIDE == 0:
+                    move = random.choice([-1, 0, 1])
+                    new_pos = self.circadian_pos + move
+                    # Reflect at boundaries
+                    if new_pos < 0:
+                        new_pos = 1
+                    elif new_pos >= len(CIRCADIAN_STEPS):
+                        new_pos = len(CIRCADIAN_STEPS) - 2
+                    self.circadian_pos = new_pos
+                    if move != 0:
+                        bpm = round(60000 / CIRCADIAN_STEPS[new_pos])
+                        print(f"  Circadian: step {new_pos} "
+                              f"({CIRCADIAN_STEPS[new_pos]}ms, ~{bpm} BPM)")
 
             gen_delay = CIRCADIAN_STEPS[self.circadian_pos]
             self.display.root.after(gen_delay, self.simulation_step)
