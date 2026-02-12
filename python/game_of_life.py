@@ -51,8 +51,8 @@ TWINKLE_HZ = 1.0 / TWINKLE_PERIOD
 # --- Ticker ---
 TICKER_LINES = [
     "Fate isnt what were up against",
-    "Theres no design",
-    "No flaw to find",
+    "There is no design",
+    "No flaws to find",
 ]
 SCROLL_BASE_DELAY = 0.047
 SCROLL_EXPONENTS = [0, 1, 1.5]        # φ exponents per line: 1×, φ, φ^1.5

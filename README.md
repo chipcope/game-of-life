@@ -34,8 +34,8 @@ Timing derives from two rhythms: the **breath** (5-second twinkle cycle) and the
 1. **Stargazing** — 5 seconds of pure night sky. 12 stars twinkle on black. One full breath before anything happens.
 2. **Ticker** scrolls three lines in gothic blackletter, each line slower than the last (φ deceleration: 47ms → 76ms → 101ms per pixel):
    - *Fate isnt what were up against* — brisk
-   - *Theres no design* — easing
-   - *No flaw to find* — drifting
+   - *There is no design* — easing
+   - *No flaws to find* — drifting
    One heartbeat pause between each line.
 3. **Dawn** — "find" holds for 7.5s (1½ breaths) as the background transitions from black → primary blue. Stars fade out.
 4. **Dissolve** — Game of Life rules kick in. The letters shatter into green cells on a blue sea over 16 generations.

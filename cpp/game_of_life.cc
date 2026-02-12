@@ -81,8 +81,8 @@ static const int DAWN_STEP_US = SEED_HOLD_US / DAWN_STEPS;
 
 static const char *TICKER_LINES[] = {
     "Fate isnt what were up against",
-    "Theres no design",
-    "No flaw to find",
+    "There is no design",
+    "No flaws to find",
 };
 static const int NUM_LINES = 3;
 

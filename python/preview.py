@@ -60,8 +60,8 @@ TWINKLE_MS = 5000                     # one full cycle in ms
 # --- Ticker ---
 TICKER_LINES = [
     "Fate isnt what were up against",
-    "Theres no design",
-    "No flaw to find",
+    "There is no design",
+    "No flaws to find",
 ]
 SCROLL_BASE_DELAY_MS = 47             # px delay for longest line
 SCROLL_EXPONENTS = [0, 1, 1.5]        # φ exponents per line: 1×, φ, φ^1.5
