@@ -390,14 +390,14 @@ int main(int argc, char *argv[]) {
     }
 
     // --- Game of Life ---
-    printf("\n=== Dissolving (triple last word) ===\n");
+    printf("\n=== Dissolving (cascade) ===\n");
 
     auto find_bitmap = text_to_bitmap("find");
     int gen_count = 0;
     int stale_count = 0;
     int last_pop = 0;
     bool dissolving = true;
-    int dissolve_phase = 1;  // 1=center only, 2–8=overlays
+    int dissolve_phase = 1;  // 1=center only, 2–5=overlays
     int circadian_pos = CIRCADIAN_CENTER;
 
     while (!interrupted) {
