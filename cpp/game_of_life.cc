@@ -51,8 +51,7 @@ static const double SCROLL_EXPONENTS[] = {0, 1, 1.5};  // φ exponents per line
 static const int PAUSE_BETWEEN_US    = HEARTBEAT_US;  // one heartbeat between lines
 static const int STARGAZE_US         = TWINKLE_US;            // one full breath
 static const int SEED_HOLD_US        = TWINKLE_US * 3 / 2;   // 7.5s — breath and a half
-static const int DISSOLVE_PHASE_GENS = 4;
-static const int DISSOLVE_TOTAL_GENS = 20;   // 5 phases × 4 gens
+static const int DISSOLVE_TOTAL_GENS = 12;   // accelerating cascade
 static const int STALE_RESET_GENS    = 50;
 static const float INITIAL_DENSITY   = 0.20f;
 
@@ -63,12 +62,12 @@ static const int FIND_Y_BOT          = 43;
 static const int FIND_Y_UPPER_BRIDGE = 11;   // centered on top/mid boundary (row 21)
 static const int FIND_Y_LOWER_BRIDGE = 32;   // centered on mid/bot boundary (row 42)
 
-// Dissolve schedule: 4 overlays after the initial dawn seed (phase 1)
+// Dissolve schedule: accelerating cascade (gaps: 4, 3, 2, 1 gens)
 static const struct { int gen; int y; } DISSOLVE_SCHEDULE[] = {
-    { DISSOLVE_PHASE_GENS * 1,  FIND_Y_TOP          },  // phase 2
-    { DISSOLVE_PHASE_GENS * 2,  FIND_Y_BOT          },  // phase 3
-    { DISSOLVE_PHASE_GENS * 3,  FIND_Y_UPPER_BRIDGE },  // phase 4
-    { DISSOLVE_PHASE_GENS * 4,  FIND_Y_LOWER_BRIDGE },  // phase 5
+    {  4,  FIND_Y_TOP          },  // phase 2 (gap: 4)
+    {  7,  FIND_Y_BOT          },  // phase 3 (gap: 3)
+    {  9,  FIND_Y_UPPER_BRIDGE },  // phase 4 (gap: 2)
+    { 10,  FIND_Y_LOWER_BRIDGE },  // phase 5 (gap: 1)
 };
 static const int NUM_DISSOLVE_OVERLAYS = 4;
 
@@ -438,23 +437,26 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        if (!dissolving && (stale_count >= STALE_RESET_GENS || pop == 0)) {
-            printf("  Resetting at gen %d (pop=%d)\n", gen_count, pop);
-            randomize(grid);
-            stale_count = 0;
-        }
+        if (!dissolving) {
+            if (stale_count >= STALE_RESET_GENS || pop == 0) {
+                printf("  Resetting at gen %d (pop=%d)\n", gen_count, pop);
+                randomize(grid);
+                stale_count = 0;
+            }
 
-        // Circadian rhythm: random walk every CIRCADIAN_STRIDE gens
-        if (gen_count % CIRCADIAN_STRIDE == 0) {
-            int move = (rand() % 3) - 1;  // -1, 0, or 1
-            int new_pos = circadian_pos + move;
-            if (new_pos < 0) new_pos = 1;
-            else if (new_pos >= CIRCADIAN_COUNT) new_pos = CIRCADIAN_COUNT - 2;
-            circadian_pos = new_pos;
-            if (move != 0) {
-                int bpm = 60000000 / CIRCADIAN_STEPS[new_pos];
-                printf("  Circadian: step %d (%dms, ~%d BPM)\n",
-                       new_pos, CIRCADIAN_STEPS[new_pos] / 1000, bpm);
+            // Circadian rhythm: random walk every CIRCADIAN_STRIDE gens
+            // (frozen during dissolve for deterministic cascade timing)
+            if (gen_count % CIRCADIAN_STRIDE == 0) {
+                int move = (rand() % 3) - 1;  // -1, 0, or 1
+                int new_pos = circadian_pos + move;
+                if (new_pos < 0) new_pos = 1;
+                else if (new_pos >= CIRCADIAN_COUNT) new_pos = CIRCADIAN_COUNT - 2;
+                circadian_pos = new_pos;
+                if (move != 0) {
+                    int bpm = 60000000 / CIRCADIAN_STEPS[new_pos];
+                    printf("  Circadian: step %d (%dms, ~%d BPM)\n",
+                           new_pos, CIRCADIAN_STEPS[new_pos] / 1000, bpm);
+                }
             }
         }
 

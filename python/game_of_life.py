@@ -67,8 +67,7 @@ DAWN_STEPS = 50
 DAWN_STEP_DELAY = SEED_HOLD / DAWN_STEPS
 
 # --- Simulation ---
-DISSOLVE_PHASE_GENS = 4
-DISSOLVE_TOTAL_GENS = 20              # 5 phases × 4 gens
+DISSOLVE_TOTAL_GENS = 12              # accelerating cascade
 
 # Last-word vertical positions
 FIND_Y_TOP = 1
@@ -77,12 +76,12 @@ FIND_Y_BOT = 43
 FIND_Y_UPPER_BRIDGE = 11             # centered on top/mid boundary (row 21)
 FIND_Y_LOWER_BRIDGE = 32             # centered on mid/bot boundary (row 42)
 
-# Dissolve schedule: 4 overlays after the initial dawn seed (phase 1)
+# Dissolve schedule: accelerating cascade (gaps: 4, 3, 2, 1 gens)
 DISSOLVE_SCHEDULE = [
-    (DISSOLVE_PHASE_GENS * 1, FIND_Y_TOP),           # phase 2
-    (DISSOLVE_PHASE_GENS * 2, FIND_Y_BOT),           # phase 3
-    (DISSOLVE_PHASE_GENS * 3, FIND_Y_UPPER_BRIDGE),  # phase 4
-    (DISSOLVE_PHASE_GENS * 4, FIND_Y_LOWER_BRIDGE),  # phase 5
+    ( 4, FIND_Y_TOP),                 # phase 2 (gap: 4)
+    ( 7, FIND_Y_BOT),                 # phase 3 (gap: 3)
+    ( 9, FIND_Y_UPPER_BRIDGE),        # phase 4 (gap: 2)
+    (10, FIND_Y_LOWER_BRIDGE),        # phase 5 (gap: 1)
 ]
 
 # --- Circadian Rhythm ---
@@ -343,19 +342,21 @@ def main():
                     grid = random_grid()
                     stale_count = 0
 
-            # Circadian rhythm: random walk every CIRCADIAN_STRIDE gens
-            if gen_count % CIRCADIAN_STRIDE == 0:
-                move = random.choice([-1, 0, 1])
-                new_pos = circadian_pos + move
-                if new_pos < 0:
-                    new_pos = 1
-                elif new_pos >= len(CIRCADIAN_STEPS):
-                    new_pos = len(CIRCADIAN_STEPS) - 2
-                circadian_pos = new_pos
-                if move != 0:
-                    bpm = round(60 / CIRCADIAN_STEPS[new_pos])
-                    print(f"  Circadian: step {new_pos} "
-                          f"({CIRCADIAN_STEPS[new_pos]:.3f}s, ~{bpm} BPM)")
+                # Circadian rhythm: random walk every CIRCADIAN_STRIDE gens
+                # (frozen during dissolve for deterministic cascade timing)
+                if gen_count % CIRCADIAN_STRIDE == 0:
+                    move = random.choice([-1, 0, 1])
+                    new_pos = circadian_pos + move
+                    if new_pos < 0:
+                        new_pos = 1
+                    elif new_pos >= len(CIRCADIAN_STEPS):
+                        new_pos = len(CIRCADIAN_STEPS) - 2
+                    circadian_pos = new_pos
+                    if move != 0:
+                        bpm = round(60 / CIRCADIAN_STEPS[new_pos])
+                        print(f"  Circadian: step {new_pos} "
+                              f"({CIRCADIAN_STEPS[new_pos]:.3f}s, "
+                              f"~{bpm} BPM)")
 
             time.sleep(CIRCADIAN_STEPS[circadian_pos])
 
