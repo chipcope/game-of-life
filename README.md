@@ -34,7 +34,7 @@ Timing derives from two rhythms: the **breath** (5-second twinkle cycle) and the
 1. **Stargazing** — 5 seconds of pure night sky. 12 stars twinkle on black. One full breath before anything happens.
 2. **Ticker** scrolls three lines of a cryptic message in gothic blackletter, each line slower than the last (φ deceleration: 47ms → 76ms → 97ms per pixel). One heartbeat pause between each line.
 3. **Dawn** — the last word holds for 7.5s (1½ breaths) as the background transitions from black → primary blue. Stars fade out.
-4. **Dissolve** — Three-phase reveal: after 4 generations of the last word dissolving, a second copy appears above (top third). Four more generations, a third copy appears below (bottom third). All three dissolve together for 4 final generations (12 total). The scattered remnants become the simulation seed — no random reseed.
+4. **Dissolve** — Eight-phase reveal over 32 generations: the last word dissolves, then reappears at different vertical positions every 4 generations — top, bottom, upper bridge, lower bridge, then the original three positions again. Each overlay dissolves into the chaos of the previous ones. The scattered remnants become the simulation seed — no random reseed.
 5. **Cruise** — simulation runs indefinitely with a **circadian rhythm**: a random walk across 9 tempo steps (58–100 BPM) that drifts every 8 generations, bell-curving around 80 BPM. Auto-reseeds after 50 stale generations.
 
 **Colors:** Primary green (#00ff00) alive cells on primary blue (#0000ff) background. The green is the one constant as the world transforms around it.
@@ -105,8 +105,8 @@ Timing derives from two rhythms. The **breath** (5s twinkle cycle) governs pause
 | `CIRCADIAN_STEPS` | 600–1034ms | 9 tempo steps, 58–100 BPM |
 | `CIRCADIAN_STRIDE` | 8 gens | Random walk interval (~6s at center) |
 | `DISSOLVE_PHASE_GENS` | 4 | Generations per phase (3 phases) |
-| `DISSOLVE_TOTAL_GENS` | 12 | ~9s — triple last-word dissolve |
-| `FIND_Y_TOP/MID/BOT` | 1 / 22 / 43 | Vertical thirds for triple dissolve |
+| `DISSOLVE_TOTAL_GENS` | 32 | ~24s — 8-phase last-word dissolve |
+| `FIND_Y_*` | 1/11/22/32/43 | Vertical positions for dissolve overlays |
 | `STALE_RESET_GENS` | 50 | ~38s before auto-reseed |
 
 ---

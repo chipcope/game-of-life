@@ -52,14 +52,28 @@ static const int PAUSE_BETWEEN_US    = HEARTBEAT_US;  // one heartbeat between l
 static const int STARGAZE_US         = TWINKLE_US;            // one full breath
 static const int SEED_HOLD_US        = TWINKLE_US * 3 / 2;   // 7.5s — breath and a half
 static const int DISSOLVE_PHASE_GENS = 4;
-static const int DISSOLVE_TOTAL_GENS = 12;   // 3 phases × 4 gens
+static const int DISSOLVE_TOTAL_GENS = 32;   // 8 phases × 4 gens
 static const int STALE_RESET_GENS    = 50;
 static const float INITIAL_DENSITY   = 0.20f;
 
-// Triple last-word vertical positions (divide 64 rows into thirds)
+// Last-word vertical positions
 static const int FIND_Y_TOP          = 1;
 static const int FIND_Y_MID          = 22;   // == (ROWS - CHAR_HEIGHT) / 2
 static const int FIND_Y_BOT          = 43;
+static const int FIND_Y_UPPER_BRIDGE = 11;   // centered on top/mid boundary (row 21)
+static const int FIND_Y_LOWER_BRIDGE = 32;   // centered on mid/bot boundary (row 42)
+
+// Dissolve schedule: 7 overlays after the initial dawn seed (phase 1)
+static const struct { int gen; int y; } DISSOLVE_SCHEDULE[] = {
+    { DISSOLVE_PHASE_GENS * 1,  FIND_Y_TOP          },  // phase 2
+    { DISSOLVE_PHASE_GENS * 2,  FIND_Y_BOT          },  // phase 3
+    { DISSOLVE_PHASE_GENS * 3,  FIND_Y_UPPER_BRIDGE },  // phase 4
+    { DISSOLVE_PHASE_GENS * 4,  FIND_Y_LOWER_BRIDGE },  // phase 5
+    { DISSOLVE_PHASE_GENS * 5,  FIND_Y_MID          },  // phase 6 (center repeat)
+    { DISSOLVE_PHASE_GENS * 6,  FIND_Y_TOP          },  // phase 7 (top repeat)
+    { DISSOLVE_PHASE_GENS * 7,  FIND_Y_BOT          },  // phase 8 (bottom repeat)
+};
+static const int NUM_DISSOLVE_OVERLAYS = 7;
 
 // --- Circadian Rhythm ---
 //   Random walk on 9 steps, centered on 750ms (80 BPM).
@@ -387,7 +401,7 @@ int main(int argc, char *argv[]) {
     int stale_count = 0;
     int last_pop = 0;
     bool dissolving = true;
-    int dissolve_phase = 1;  // 1=center only, 2=+top, 3=+bottom
+    int dissolve_phase = 1;  // 1=center only, 2–8=overlays
     int circadian_pos = CIRCADIAN_CENTER;
 
     while (!interrupted) {
@@ -410,17 +424,17 @@ int main(int argc, char *argv[]) {
 
         // Phased dissolve: overlay new last word at phase boundaries
         if (dissolving) {
-            if (dissolve_phase == 1 && gen_count >= DISSOLVE_PHASE_GENS) {
-                printf("  Phase 2: overlaying last word at y=%d\n", FIND_Y_TOP);
-                overlay_bitmap_to_grid(find_bitmap, grid, COLS, ROWS, 0, FIND_Y_TOP);
-                dissolve_phase = 2;
+            int idx = dissolve_phase - 1;  // schedule is 0-indexed
+            if (idx < NUM_DISSOLVE_OVERLAYS
+                    && gen_count >= DISSOLVE_SCHEDULE[idx].gen) {
+                printf("  Phase %d: overlaying last word at y=%d\n",
+                       dissolve_phase + 1, DISSOLVE_SCHEDULE[idx].y);
+                overlay_bitmap_to_grid(find_bitmap, grid, COLS, ROWS,
+                                       0, DISSOLVE_SCHEDULE[idx].y);
+                dissolve_phase++;
                 stale_count = 0;
-            } else if (dissolve_phase == 2 && gen_count >= DISSOLVE_PHASE_GENS * 2) {
-                printf("  Phase 3: overlaying last word at y=%d\n", FIND_Y_BOT);
-                overlay_bitmap_to_grid(find_bitmap, grid, COLS, ROWS, 0, FIND_Y_BOT);
-                dissolve_phase = 3;
-                stale_count = 0;
-            } else if (dissolve_phase == 3 && gen_count >= DISSOLVE_TOTAL_GENS) {
+            } else if (idx >= NUM_DISSOLVE_OVERLAYS
+                           && gen_count >= DISSOLVE_TOTAL_GENS) {
                 printf("  Dissolve complete, entering cruise (natural seed)\n");
                 dissolving = false;
                 stale_count = 0;

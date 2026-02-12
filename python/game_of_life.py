@@ -68,12 +68,25 @@ DAWN_STEP_DELAY = SEED_HOLD / DAWN_STEPS
 
 # --- Simulation ---
 DISSOLVE_PHASE_GENS = 4
-DISSOLVE_TOTAL_GENS = 12              # 3 phases × 4 gens
+DISSOLVE_TOTAL_GENS = 32              # 8 phases × 4 gens
 
-# Triple last-word vertical positions (divide 64 rows into thirds)
+# Last-word vertical positions
 FIND_Y_TOP = 1
 FIND_Y_MID = 22                       # == (ROWS - CHAR_HEIGHT) // 2
 FIND_Y_BOT = 43
+FIND_Y_UPPER_BRIDGE = 11             # centered on top/mid boundary (row 21)
+FIND_Y_LOWER_BRIDGE = 32             # centered on mid/bot boundary (row 42)
+
+# Dissolve schedule: 7 overlays after the initial dawn seed (phase 1)
+DISSOLVE_SCHEDULE = [
+    (DISSOLVE_PHASE_GENS * 1, FIND_Y_TOP),           # phase 2
+    (DISSOLVE_PHASE_GENS * 2, FIND_Y_BOT),           # phase 3
+    (DISSOLVE_PHASE_GENS * 3, FIND_Y_UPPER_BRIDGE),  # phase 4
+    (DISSOLVE_PHASE_GENS * 4, FIND_Y_LOWER_BRIDGE),  # phase 5
+    (DISSOLVE_PHASE_GENS * 5, FIND_Y_MID),           # phase 6 (center repeat)
+    (DISSOLVE_PHASE_GENS * 6, FIND_Y_TOP),           # phase 7 (top repeat)
+    (DISSOLVE_PHASE_GENS * 7, FIND_Y_BOT),           # phase 8 (bottom repeat)
+]
 
 # --- Circadian Rhythm ---
 #   Random walk on 9 steps, centered on 750ms (80 BPM).
@@ -288,7 +301,7 @@ def main():
     stale_count = 0
     last_pop = 0
     dissolving = True
-    dissolve_phase = 1  # 1=center only, 2=+top, 3=+bottom
+    dissolve_phase = 1  # 1=center only, 2–8=overlays
     circadian_pos = CIRCADIAN_CENTER
 
     try:
@@ -309,21 +322,17 @@ def main():
 
             # Phased dissolve: overlay new last word at phase boundaries
             if dissolving:
-                if (dissolve_phase == 1
-                        and gen_count >= DISSOLVE_PHASE_GENS):
-                    print(f"  Phase 2: overlaying last word at y={FIND_Y_TOP}")
+                idx = dissolve_phase - 1  # schedule is 0-indexed
+                if (idx < len(DISSOLVE_SCHEDULE)
+                        and gen_count >= DISSOLVE_SCHEDULE[idx][0]):
+                    y = DISSOLVE_SCHEDULE[idx][1]
+                    print(f"  Phase {dissolve_phase + 1}: "
+                          f"overlaying last word at y={y}")
                     overlay_bitmap_to_grid(find_bitmap, grid,
-                                           x_offset=0, y_offset=FIND_Y_TOP)
-                    dissolve_phase = 2
+                                           x_offset=0, y_offset=y)
+                    dissolve_phase += 1
                     stale_count = 0
-                elif (dissolve_phase == 2
-                        and gen_count >= DISSOLVE_PHASE_GENS * 2):
-                    print(f"  Phase 3: overlaying last word at y={FIND_Y_BOT}")
-                    overlay_bitmap_to_grid(find_bitmap, grid,
-                                           x_offset=0, y_offset=FIND_Y_BOT)
-                    dissolve_phase = 3
-                    stale_count = 0
-                elif (dissolve_phase == 3
+                elif (idx >= len(DISSOLVE_SCHEDULE)
                         and gen_count >= DISSOLVE_TOTAL_GENS):
                     print("  Dissolve complete, entering cruise "
                           "(natural seed)")

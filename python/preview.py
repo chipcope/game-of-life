@@ -78,14 +78,27 @@ DAWN_STEP_MS = SEED_HOLD_MS // DAWN_STEPS  # 150ms per step
 
 # --- Simulation ---
 DISSOLVE_PHASE_GENS = 4
-DISSOLVE_TOTAL_GENS = 12              # 3 phases × 4 gens
+DISSOLVE_TOTAL_GENS = 32              # 8 phases × 4 gens
 INITIAL_DENSITY = 0.20
 STALE_RESET_GENS = 50
 
-# Triple last-word vertical positions (divide 64 rows into thirds)
+# Last-word vertical positions
 FIND_Y_TOP = 1
 FIND_Y_MID = 22                       # == (ROWS - CHAR_HEIGHT) // 2
 FIND_Y_BOT = 43
+FIND_Y_UPPER_BRIDGE = 11             # centered on top/mid boundary (row 21)
+FIND_Y_LOWER_BRIDGE = 32             # centered on mid/bot boundary (row 42)
+
+# Dissolve schedule: 7 overlays after the initial dawn seed (phase 1)
+DISSOLVE_SCHEDULE = [
+    (DISSOLVE_PHASE_GENS * 1, FIND_Y_TOP),           # phase 2
+    (DISSOLVE_PHASE_GENS * 2, FIND_Y_BOT),           # phase 3
+    (DISSOLVE_PHASE_GENS * 3, FIND_Y_UPPER_BRIDGE),  # phase 4
+    (DISSOLVE_PHASE_GENS * 4, FIND_Y_LOWER_BRIDGE),  # phase 5
+    (DISSOLVE_PHASE_GENS * 5, FIND_Y_MID),           # phase 6 (center repeat)
+    (DISSOLVE_PHASE_GENS * 6, FIND_Y_TOP),           # phase 7 (top repeat)
+    (DISSOLVE_PHASE_GENS * 7, FIND_Y_BOT),           # phase 8 (bottom repeat)
+]
 
 # --- Circadian Rhythm ---
 #   Random walk on 9 steps, centered on 750ms (80 BPM).
@@ -347,7 +360,7 @@ class GameOfLife:
         self.stale_count = 0
         self.last_pop = 0
         self.dissolving = True
-        self.dissolve_phase = 1  # 1=center only, 2=+top, 3=+bottom
+        self.dissolve_phase = 1  # 1=center only, 2–8=overlays
         self.find_bitmap = text_to_bitmap("find")
         self.simulation_step()
 
@@ -371,21 +384,17 @@ class GameOfLife:
 
             # Phased dissolve: overlay new last word at phase boundaries
             if self.dissolving:
-                if (self.dissolve_phase == 1
-                        and self.gen_count >= DISSOLVE_PHASE_GENS):
-                    print(f"  Phase 2: overlaying last word at y={FIND_Y_TOP}")
+                idx = self.dissolve_phase - 1  # schedule is 0-indexed
+                if (idx < len(DISSOLVE_SCHEDULE)
+                        and self.gen_count >= DISSOLVE_SCHEDULE[idx][0]):
+                    y = DISSOLVE_SCHEDULE[idx][1]
+                    print(f"  Phase {self.dissolve_phase + 1}: "
+                          f"overlaying last word at y={y}")
                     overlay_bitmap_to_grid(self.find_bitmap, self.grid,
-                                           x_offset=0, y_offset=FIND_Y_TOP)
-                    self.dissolve_phase = 2
+                                           x_offset=0, y_offset=y)
+                    self.dissolve_phase += 1
                     self.stale_count = 0
-                elif (self.dissolve_phase == 2
-                        and self.gen_count >= DISSOLVE_PHASE_GENS * 2):
-                    print(f"  Phase 3: overlaying last word at y={FIND_Y_BOT}")
-                    overlay_bitmap_to_grid(self.find_bitmap, self.grid,
-                                           x_offset=0, y_offset=FIND_Y_BOT)
-                    self.dissolve_phase = 3
-                    self.stale_count = 0
-                elif (self.dissolve_phase == 3
+                elif (idx >= len(DISSOLVE_SCHEDULE)
                         and self.gen_count >= DISSOLVE_TOTAL_GENS):
                     print("  Dissolve complete, entering cruise "
                           "(natural seed)")
