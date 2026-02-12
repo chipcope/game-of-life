@@ -1,6 +1,6 @@
 # Conway's Game of Life on a 64x64 RGB LED Matrix
 
-A medieval blackletter ticker scrolls a cryptic message, lands on the word **"find"**, holds — then the letters dissolve under Game of Life rules. The simulation runs forever, its pace drifting with a circadian rhythm.
+A medieval blackletter ticker scrolls a cryptic message, lands on the last word, holds — then the letters dissolve under Game of Life rules. The simulation runs forever, its pace drifting with a circadian rhythm.
 
 ## Quick Start
 
@@ -32,13 +32,9 @@ sudo ./game-of-life
 Timing derives from two rhythms: the **breath** (5-second twinkle cycle) and the **heartbeat** (750ms generation tick, ~80 BPM). Scroll speed decelerates line-to-line by φ (golden ratio).
 
 1. **Stargazing** — 5 seconds of pure night sky. 12 stars twinkle on black. One full breath before anything happens.
-2. **Ticker** scrolls three lines in gothic blackletter, each line slower than the last (φ deceleration: 47ms → 76ms → 97ms per pixel):
-   - *Fate isnt what were up against* — brisk
-   - *There is no design* — easing
-   - *No flaws to find* — drifting
-   One heartbeat pause between each line.
-3. **Dawn** — "find" holds for 7.5s (1½ breaths) as the background transitions from black → primary blue. Stars fade out.
-4. **Dissolve** — Three-phase reveal: after 4 generations of the center "find" dissolving, a second "find" appears above (top third). Four more generations, a third "find" appears below (bottom third). All three dissolve together for 4 final generations (12 total). The scattered remnants become the simulation seed — no random reseed.
+2. **Ticker** scrolls three lines of a cryptic message in gothic blackletter, each line slower than the last (φ deceleration: 47ms → 76ms → 97ms per pixel). One heartbeat pause between each line.
+3. **Dawn** — the last word holds for 7.5s (1½ breaths) as the background transitions from black → primary blue. Stars fade out.
+4. **Dissolve** — Three-phase reveal: after 4 generations of the last word dissolving, a second copy appears above (top third). Four more generations, a third copy appears below (bottom third). All three dissolve together for 4 final generations (12 total). The scattered remnants become the simulation seed — no random reseed.
 5. **Cruise** — simulation runs indefinitely with a **circadian rhythm**: a random walk across 9 tempo steps (58–100 BPM) that drifts every 8 generations, bell-curving around 80 BPM. Auto-reseeds after 50 stale generations.
 
 **Colors:** Primary green (#00ff00) alive cells on primary blue (#0000ff) background. The green is the one constant as the world transforms around it.
@@ -103,14 +99,14 @@ Timing derives from two rhythms. The **breath** (5s twinkle cycle) governs pause
 | `TWINKLE` | 5s cycle | The fundamental breath |
 | `STARGAZE` | 5000ms | 1 breath — opening pause |
 | `PAUSE_BETWEEN` | 750ms | One heartbeat between lines |
-| `SEED_HOLD` | 7500ms | 1½ breaths — "find" hold + dawn |
+| `SEED_HOLD` | 7500ms | 1½ breaths — last word hold + dawn |
 | `SCROLL_BASE_DELAY` | 47ms/px | Fastest line (line 1) |
 | `SCROLL_EXPONENTS` | 0, 1, 1.5 | φ⁰=47, φ¹=76, φ^1.5≈97 ms/px |
 | `CIRCADIAN_STEPS` | 600–1034ms | 9 tempo steps, 58–100 BPM |
 | `CIRCADIAN_STRIDE` | 8 gens | Random walk interval (~6s at center) |
 | `DISSOLVE_PHASE_GENS` | 4 | Generations per phase (3 phases) |
-| `DISSOLVE_TOTAL_GENS` | 12 | ~9s — triple "find" dissolve |
-| `FIND_Y_TOP/MID/BOT` | 1 / 22 / 43 | Vertical thirds for triple "find" |
+| `DISSOLVE_TOTAL_GENS` | 12 | ~9s — triple last-word dissolve |
+| `FIND_Y_TOP/MID/BOT` | 1 / 22 / 43 | Vertical thirds for triple dissolve |
 | `STALE_RESET_GENS` | 50 | ~38s before auto-reseed |
 
 ---

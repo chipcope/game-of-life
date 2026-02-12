@@ -56,7 +56,7 @@ static const int DISSOLVE_TOTAL_GENS = 12;   // 3 phases × 4 gens
 static const int STALE_RESET_GENS    = 50;
 static const float INITIAL_DENSITY   = 0.20f;
 
-// Triple "find" vertical positions (divide 64 rows into thirds)
+// Triple last-word vertical positions (divide 64 rows into thirds)
 static const int FIND_Y_TOP          = 1;
 static const int FIND_Y_MID          = 22;   // == (ROWS - CHAR_HEIGHT) / 2
 static const int FIND_Y_BOT          = 43;
@@ -296,7 +296,7 @@ static FrameCanvas *scroll_final_and_dawn(RGBMatrix *matrix, FrameCanvas *canvas
     int find_start = ((int)full.size() - (int)find_text.size()) * CELL_WIDTH;
     int x_stop = -find_start;
 
-    // Scroll until "find" centered
+    // Scroll until last word centered
     int delay = scroll_delay_for_index(line_index);
     for (int x = COLS; x > x_stop && !interrupted; x--) {
         render_night_frame(canvas, bitmap, x, y_offset,
@@ -371,7 +371,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (!interrupted) {
-        printf("  Scrolling: \"%s\" (stopping on \"find\")\n",
+        printf("  Scrolling: \"%s\" (stopping on last word)\n",
                TICKER_LINES[NUM_LINES - 1]);
         canvas = scroll_final_and_dawn(matrix, canvas,
                                         TICKER_LINES[NUM_LINES - 1],
@@ -380,7 +380,7 @@ int main(int argc, char *argv[]) {
     }
 
     // --- Game of Life ---
-    printf("\n=== Dissolving (triple find) ===\n");
+    printf("\n=== Dissolving (triple last word) ===\n");
 
     auto find_bitmap = text_to_bitmap("find");
     int gen_count = 0;
@@ -408,15 +408,15 @@ int main(int argc, char *argv[]) {
         if (gen_count <= 30 || gen_count % 25 == 0)
             printf("  Gen %d: pop=%d\n", gen_count, pop);
 
-        // Phased dissolve: overlay new "find" at phase boundaries
+        // Phased dissolve: overlay new last word at phase boundaries
         if (dissolving) {
             if (dissolve_phase == 1 && gen_count >= DISSOLVE_PHASE_GENS) {
-                printf("  Phase 2: overlaying 'find' at y=%d\n", FIND_Y_TOP);
+                printf("  Phase 2: overlaying last word at y=%d\n", FIND_Y_TOP);
                 overlay_bitmap_to_grid(find_bitmap, grid, COLS, ROWS, 0, FIND_Y_TOP);
                 dissolve_phase = 2;
                 stale_count = 0;
             } else if (dissolve_phase == 2 && gen_count >= DISSOLVE_PHASE_GENS * 2) {
-                printf("  Phase 3: overlaying 'find' at y=%d\n", FIND_Y_BOT);
+                printf("  Phase 3: overlaying last word at y=%d\n", FIND_Y_BOT);
                 overlay_bitmap_to_grid(find_bitmap, grid, COLS, ROWS, 0, FIND_Y_BOT);
                 dissolve_phase = 3;
                 stale_count = 0;
