@@ -18,7 +18,10 @@ import math
 import time
 import random
 import tkinter as tk
-from bubble_font import text_to_bitmap, bitmap_to_grid, CHAR_HEIGHT, CELL_WIDTH
+from bubble_font import (
+    text_to_bitmap, bitmap_to_grid, overlay_bitmap_to_grid,
+    CHAR_HEIGHT, CELL_WIDTH
+)
 
 # --- Matrix / Display Config ---
 ROWS = 64
@@ -74,9 +77,15 @@ DAWN_STEPS = 50
 DAWN_STEP_MS = SEED_HOLD_MS // DAWN_STEPS  # 150ms per step
 
 # --- Simulation ---
-DISSOLVE_GENS = 12
-INITIAL_DENSITY = 0.3
+DISSOLVE_PHASE_GENS = 4
+DISSOLVE_TOTAL_GENS = 12              # 3 phases × 4 gens
+INITIAL_DENSITY = 0.20
 STALE_RESET_GENS = 50
+
+# Triple "find" vertical positions (divide 64 rows into thirds)
+FIND_Y_TOP = 1
+FIND_Y_MID = 22                       # == (ROWS - CHAR_HEIGHT) // 2
+FIND_Y_BOT = 43
 
 # --- Circadian Rhythm ---
 #   Random walk on 9 steps, centered on 750ms (80 BPM).
@@ -333,11 +342,13 @@ class GameOfLife:
         scroll_next(0)
 
     def start_dissolve(self):
-        print("\n=== Dissolving ===")
+        print("\n=== Dissolving (triple find) ===")
         self.gen_count = 0
         self.stale_count = 0
         self.last_pop = 0
         self.dissolving = True
+        self.dissolve_phase = 1  # 1=center only, 2=+top, 3=+bottom
+        self.find_bitmap = text_to_bitmap("find")
         self.simulation_step()
 
     def simulation_step(self):
@@ -355,14 +366,31 @@ class GameOfLife:
                 self.stale_count = 0
             self.last_pop = current_pop
 
-            if self.gen_count <= 20 or self.gen_count % 25 == 0:
+            if self.gen_count <= 30 or self.gen_count % 25 == 0:
                 print(f"  Gen {self.gen_count}: pop={current_pop}")
 
-            if self.dissolving and self.gen_count >= DISSOLVE_GENS:
-                print(f"  Dissolve complete, reseeding")
-                self.grid = random_grid()
-                self.dissolving = False
-                self.stale_count = 0
+            # Phased dissolve: overlay new "find" at phase boundaries
+            if self.dissolving:
+                if (self.dissolve_phase == 1
+                        and self.gen_count >= DISSOLVE_PHASE_GENS):
+                    print(f"  Phase 2: overlaying 'find' at y={FIND_Y_TOP}")
+                    overlay_bitmap_to_grid(self.find_bitmap, self.grid,
+                                           x_offset=0, y_offset=FIND_Y_TOP)
+                    self.dissolve_phase = 2
+                    self.stale_count = 0
+                elif (self.dissolve_phase == 2
+                        and self.gen_count >= DISSOLVE_PHASE_GENS * 2):
+                    print(f"  Phase 3: overlaying 'find' at y={FIND_Y_BOT}")
+                    overlay_bitmap_to_grid(self.find_bitmap, self.grid,
+                                           x_offset=0, y_offset=FIND_Y_BOT)
+                    self.dissolve_phase = 3
+                    self.stale_count = 0
+                elif (self.dissolve_phase == 3
+                        and self.gen_count >= DISSOLVE_TOTAL_GENS):
+                    print("  Dissolve complete, entering cruise "
+                          "(natural seed)")
+                    self.dissolving = False
+                    self.stale_count = 0
 
             if not self.dissolving:
                 if self.stale_count >= STALE_RESET_GENS or current_pop == 0:
