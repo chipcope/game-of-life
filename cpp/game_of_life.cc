@@ -52,7 +52,7 @@ static const int PAUSE_BETWEEN_US    = HEARTBEAT_US;  // one heartbeat between l
 static const int STARGAZE_US         = TWINKLE_US;            // one full breath
 static const int SEED_HOLD_US        = TWINKLE_US * 3 / 2;   // 7.5s — breath and a half
 static const int DISSOLVE_PHASE_GENS = 4;
-static const int DISSOLVE_TOTAL_GENS = 32;   // 8 phases × 4 gens
+static const int DISSOLVE_TOTAL_GENS = 20;   // 5 phases × 4 gens
 static const int STALE_RESET_GENS    = 50;
 static const float INITIAL_DENSITY   = 0.20f;
 
@@ -63,17 +63,14 @@ static const int FIND_Y_BOT          = 43;
 static const int FIND_Y_UPPER_BRIDGE = 11;   // centered on top/mid boundary (row 21)
 static const int FIND_Y_LOWER_BRIDGE = 32;   // centered on mid/bot boundary (row 42)
 
-// Dissolve schedule: 7 overlays after the initial dawn seed (phase 1)
+// Dissolve schedule: 4 overlays after the initial dawn seed (phase 1)
 static const struct { int gen; int y; } DISSOLVE_SCHEDULE[] = {
     { DISSOLVE_PHASE_GENS * 1,  FIND_Y_TOP          },  // phase 2
     { DISSOLVE_PHASE_GENS * 2,  FIND_Y_BOT          },  // phase 3
     { DISSOLVE_PHASE_GENS * 3,  FIND_Y_UPPER_BRIDGE },  // phase 4
     { DISSOLVE_PHASE_GENS * 4,  FIND_Y_LOWER_BRIDGE },  // phase 5
-    { DISSOLVE_PHASE_GENS * 5,  FIND_Y_MID          },  // phase 6 (center repeat)
-    { DISSOLVE_PHASE_GENS * 6,  FIND_Y_TOP          },  // phase 7 (top repeat)
-    { DISSOLVE_PHASE_GENS * 7,  FIND_Y_BOT          },  // phase 8 (bottom repeat)
 };
-static const int NUM_DISSOLVE_OVERLAYS = 7;
+static const int NUM_DISSOLVE_OVERLAYS = 4;
 
 // --- Circadian Rhythm ---
 //   Random walk on 9 steps, centered on 750ms (80 BPM).
