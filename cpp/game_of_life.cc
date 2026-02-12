@@ -51,9 +51,15 @@ static const double SCROLL_EXPONENTS[] = {0, 1, 1.5};  // φ exponents per line
 static const int PAUSE_BETWEEN_US    = HEARTBEAT_US;  // one heartbeat between lines
 static const int STARGAZE_US         = TWINKLE_US;            // one full breath
 static const int SEED_HOLD_US        = TWINKLE_US * 3 / 2;   // 7.5s — breath and a half
-static const int DISSOLVE_GENS       = 12;
+static const int DISSOLVE_PHASE_GENS = 4;
+static const int DISSOLVE_TOTAL_GENS = 12;   // 3 phases × 4 gens
 static const int STALE_RESET_GENS    = 50;
-static const float INITIAL_DENSITY   = 0.3f;
+static const float INITIAL_DENSITY   = 0.20f;
+
+// Triple "find" vertical positions (divide 64 rows into thirds)
+static const int FIND_Y_TOP          = 1;
+static const int FIND_Y_MID          = 22;   // == (ROWS - CHAR_HEIGHT) / 2
+static const int FIND_Y_BOT          = 43;
 
 // --- Circadian Rhythm ---
 //   Random walk on 9 steps, centered on 750ms (80 BPM).
@@ -374,12 +380,14 @@ int main(int argc, char *argv[]) {
     }
 
     // --- Game of Life ---
-    printf("\n=== Dissolving ===\n");
+    printf("\n=== Dissolving (triple find) ===\n");
 
+    auto find_bitmap = text_to_bitmap("find");
     int gen_count = 0;
     int stale_count = 0;
     int last_pop = 0;
     bool dissolving = true;
+    int dissolve_phase = 1;  // 1=center only, 2=+top, 3=+bottom
     int circadian_pos = CIRCADIAN_CENTER;
 
     while (!interrupted) {
@@ -397,14 +405,26 @@ int main(int argc, char *argv[]) {
         else stale_count = 0;
         last_pop = pop;
 
-        if (gen_count <= 20 || gen_count % 25 == 0)
+        if (gen_count <= 30 || gen_count % 25 == 0)
             printf("  Gen %d: pop=%d\n", gen_count, pop);
 
-        if (dissolving && gen_count >= DISSOLVE_GENS) {
-            printf("  Dissolve complete, reseeding\n");
-            randomize(grid);
-            dissolving = false;
-            stale_count = 0;
+        // Phased dissolve: overlay new "find" at phase boundaries
+        if (dissolving) {
+            if (dissolve_phase == 1 && gen_count >= DISSOLVE_PHASE_GENS) {
+                printf("  Phase 2: overlaying 'find' at y=%d\n", FIND_Y_TOP);
+                overlay_bitmap_to_grid(find_bitmap, grid, COLS, ROWS, 0, FIND_Y_TOP);
+                dissolve_phase = 2;
+                stale_count = 0;
+            } else if (dissolve_phase == 2 && gen_count >= DISSOLVE_PHASE_GENS * 2) {
+                printf("  Phase 3: overlaying 'find' at y=%d\n", FIND_Y_BOT);
+                overlay_bitmap_to_grid(find_bitmap, grid, COLS, ROWS, 0, FIND_Y_BOT);
+                dissolve_phase = 3;
+                stale_count = 0;
+            } else if (dissolve_phase == 3 && gen_count >= DISSOLVE_TOTAL_GENS) {
+                printf("  Dissolve complete, entering cruise (natural seed)\n");
+                dissolving = false;
+                stale_count = 0;
+            }
         }
 
         if (!dissolving && (stale_count >= STALE_RESET_GENS || pop == 0)) {

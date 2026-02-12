@@ -474,4 +474,20 @@ static void bitmap_to_grid(const std::vector<std::vector<uint8_t>> &bitmap,
     }
 }
 
+// Overlay bitmap onto existing grid (OR operation — never clears cells)
+static void overlay_bitmap_to_grid(const std::vector<std::vector<uint8_t>> &bitmap,
+                                    uint8_t *grid, int grid_w, int grid_h,
+                                    int x_off, int y_off) {
+    for (int row = 0; row < (int)bitmap.size(); row++) {
+        int gy = y_off + row;
+        if (gy < 0 || gy >= grid_h) continue;
+        for (int col = 0; col < (int)bitmap[row].size(); col++) {
+            int gx = x_off + col;
+            if (gx < 0 || gx >= grid_w) continue;
+            if (bitmap[row][col])
+                grid[gy * grid_w + gx] = 1;
+        }
+    }
+}
+
 #endif  // BUBBLE_FONT_H

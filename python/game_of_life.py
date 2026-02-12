@@ -18,7 +18,8 @@ import time
 import random
 from rgbmatrix import RGBMatrix, RGBMatrixOptions
 from bubble_font import (
-    text_to_bitmap, bitmap_to_grid, CHAR_HEIGHT, CELL_WIDTH
+    text_to_bitmap, bitmap_to_grid, overlay_bitmap_to_grid,
+    CHAR_HEIGHT, CELL_WIDTH
 )
 
 # --- Configuration ---
@@ -31,7 +32,7 @@ ALIVE_COLOR = (0, 255, 0)
 DEAD_COLOR = (0, 0, 255)       # primary blue sea
 NIGHT_COLOR = (0, 0, 0)
 STAR_COLOR = (200, 220, 255)
-INITIAL_DENSITY = 0.3
+INITIAL_DENSITY = 0.20
 STALE_RESET_GENS = 50
 
 # --- The Breath ---
@@ -66,7 +67,13 @@ DAWN_STEPS = 50
 DAWN_STEP_DELAY = SEED_HOLD / DAWN_STEPS
 
 # --- Simulation ---
-DISSOLVE_GENS = 12
+DISSOLVE_PHASE_GENS = 4
+DISSOLVE_TOTAL_GENS = 12              # 3 phases × 4 gens
+
+# Triple "find" vertical positions (divide 64 rows into thirds)
+FIND_Y_TOP = 1
+FIND_Y_MID = 22                       # == (ROWS - CHAR_HEIGHT) // 2
+FIND_Y_BOT = 43
 
 # --- Circadian Rhythm ---
 #   Random walk on 9 steps, centered on 750ms (80 BPM).
@@ -275,11 +282,13 @@ def main():
     print("=== Startup Ticker ===")
     canvas, grid = startup_sequence(matrix, canvas)
 
-    print("\n=== Dissolving ===")
+    print("\n=== Dissolving (triple find) ===")
+    find_bitmap = text_to_bitmap("find")
     gen_count = 0
     stale_count = 0
     last_pop = 0
     dissolving = True
+    dissolve_phase = 1  # 1=center only, 2=+top, 3=+bottom
     circadian_pos = CIRCADIAN_CENTER
 
     try:
@@ -295,14 +304,31 @@ def main():
                 stale_count = 0
             last_pop = current_pop
 
-            if gen_count <= 20 or gen_count % 25 == 0:
+            if gen_count <= 30 or gen_count % 25 == 0:
                 print(f"  Gen {gen_count}: pop={current_pop}")
 
-            if dissolving and gen_count >= DISSOLVE_GENS:
-                print("  Dissolve complete, reseeding")
-                grid = random_grid()
-                dissolving = False
-                stale_count = 0
+            # Phased dissolve: overlay new "find" at phase boundaries
+            if dissolving:
+                if (dissolve_phase == 1
+                        and gen_count >= DISSOLVE_PHASE_GENS):
+                    print(f"  Phase 2: overlaying 'find' at y={FIND_Y_TOP}")
+                    overlay_bitmap_to_grid(find_bitmap, grid,
+                                           x_offset=0, y_offset=FIND_Y_TOP)
+                    dissolve_phase = 2
+                    stale_count = 0
+                elif (dissolve_phase == 2
+                        and gen_count >= DISSOLVE_PHASE_GENS * 2):
+                    print(f"  Phase 3: overlaying 'find' at y={FIND_Y_BOT}")
+                    overlay_bitmap_to_grid(find_bitmap, grid,
+                                           x_offset=0, y_offset=FIND_Y_BOT)
+                    dissolve_phase = 3
+                    stale_count = 0
+                elif (dissolve_phase == 3
+                        and gen_count >= DISSOLVE_TOTAL_GENS):
+                    print("  Dissolve complete, entering cruise "
+                          "(natural seed)")
+                    dissolving = False
+                    stale_count = 0
 
             if not dissolving:
                 if stale_count >= STALE_RESET_GENS or current_pop == 0:

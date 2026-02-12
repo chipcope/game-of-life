@@ -26,17 +26,15 @@ The frame interior opening is 7.5" × 7.5" (190.5mm). The panel is 192mm (7.56")
 
 ## Parts List
 
-| Part | Source | Price |
-|------|--------|-------|
-| Frametory 8×8 Shadow Box, Tan, 2" deep | [Amazon](https://www.amazon.com/Frametory-8x8-Black-Shadow-Case/dp/B07V3TBC7R) | ~$18 |
-| Adafruit Black LED Diffusion Acrylic 12×12" | [Adafruit #4749](https://www.adafruit.com/product/4749) | $5 |
-| Uglu Dashes adhesive rectangles | [Amazon](https://www.amazon.com/s?k=uglu+dashes) | ~$6 |
-| M2.5 × 6mm nylon standoffs (4 pack) | Amazon | ~$5 |
-| 5V 4A power supply with 2.1mm barrel jack | [Adafruit](https://www.adafruit.com/product/1466) | ~$15 |
-| 2.1mm barrel jack to screw terminal adapter | [Adafruit](https://www.adafruit.com/product/368) | ~$3 |
-| Micro-USB right-angle cable (6", optional) | Amazon | ~$6 |
-
-**Total enclosure cost (excluding Pi, Bonnet, panel):** ~$58
+| Part | Source |
+|------|--------|
+| Frametory 8×8 Shadow Box, Tan, 2" deep | [Amazon](https://www.amazon.com/Frametory-8x8-Black-Shadow-Case/dp/B07V3TBC7R) |
+| Adafruit Black LED Diffusion Acrylic 12×12" | [Adafruit #4749](https://www.adafruit.com/product/4749) |
+| Uglu Dashes adhesive rectangles | [Amazon](https://www.amazon.com/s?k=uglu+dashes) |
+| M2.5 × 6mm nylon standoffs (4 pack) | Amazon |
+| 5V 4A power supply with 2.1mm barrel jack | [Adafruit](https://www.adafruit.com/product/1466) |
+| 2.1mm barrel jack to screw terminal adapter | [Adafruit](https://www.adafruit.com/product/368) |
+| Micro-USB right-angle cable (6", optional) | Amazon |
 
 ---
 

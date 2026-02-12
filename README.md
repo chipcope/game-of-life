@@ -38,7 +38,7 @@ Timing derives from two rhythms: the **breath** (5-second twinkle cycle) and the
    - *No flaws to find* — drifting
    One heartbeat pause between each line.
 3. **Dawn** — "find" holds for 7.5s (1½ breaths) as the background transitions from black → primary blue. Stars fade out.
-4. **Dissolve** — Game of Life rules kick in. The letters shatter into green cells on a blue sea over 12 generations.
+4. **Dissolve** — Three-phase reveal: after 4 generations of the center "find" dissolving, a second "find" appears above (top third). Four more generations, a third "find" appears below (bottom third). All three dissolve together for 4 final generations (12 total). The scattered remnants become the simulation seed — no random reseed.
 5. **Cruise** — simulation runs indefinitely with a **circadian rhythm**: a random walk across 9 tempo steps (58–100 BPM) that drifts every 8 generations, bell-curving around 80 BPM. Auto-reseeds after 50 stale generations.
 
 **Colors:** Primary green (#00ff00) alive cells on primary blue (#0000ff) background. The green is the one constant as the world transforms around it.
@@ -47,15 +47,15 @@ Timing derives from two rhythms: the **breath** (5-second twinkle cycle) and the
 
 ## Hardware Requirements
 
-| Component | Description | Approx. Cost |
-|-----------|-------------|--------------|
-| **Raspberry Pi 3 A+** (or 3B+/4B) | Main controller | $25-55 |
-| **64x64 HUB75 RGB LED Matrix** | P3 or P4 pitch | $25-50 |
-| **Adafruit RGB Matrix HAT/Bonnet** | GPIO to HUB75 interface | $25 |
-| **5V 4A+ Power Supply** | Powers Pi + panel via Bonnet | $10-15 |
-| **16GB+ microSD Card** | Raspberry Pi OS Lite (64-bit) | $8-12 |
-| **Frametory 8×8 Shadow Box** | 2" depth, front-opening, tan | ~$18 |
-| **Diffusion Acrylic 12×12"** | Frosted matte P95 (Amazon) or Adafruit black LED | ~$5–8 |
+| Component | Description |
+|-----------|-------------|
+| **Raspberry Pi 3 A+** (or 3B+/4B) | Main controller |
+| **64x64 HUB75 RGB LED Matrix** | P3 or P4 pitch |
+| **Adafruit RGB Matrix HAT/Bonnet** | GPIO to HUB75 interface |
+| **5V 4A+ Power Supply** | Powers Pi + panel via Bonnet |
+| **16GB+ microSD Card** | Raspberry Pi OS Lite (64-bit) |
+| **Frametory 8×8 Shadow Box** | 2" depth, front-opening, tan |
+| **Diffusion Acrylic 12×12"** | Frosted matte P95 (Amazon) or Adafruit black LED |
 
 See [docs/ENCLOSURE.md](docs/ENCLOSURE.md) for the full enclosure build guide.
 
@@ -108,7 +108,9 @@ Timing derives from two rhythms. The **breath** (5s twinkle cycle) governs pause
 | `SCROLL_EXPONENTS` | 0, 1, 1.5 | φ⁰=47, φ¹=76, φ^1.5≈97 ms/px |
 | `CIRCADIAN_STEPS` | 600–1034ms | 9 tempo steps, 58–100 BPM |
 | `CIRCADIAN_STRIDE` | 8 gens | Random walk interval (~6s at center) |
-| `DISSOLVE_GENS` | 12 | ~9s — reseed while the ghost lingers |
+| `DISSOLVE_PHASE_GENS` | 4 | Generations per phase (3 phases) |
+| `DISSOLVE_TOTAL_GENS` | 12 | ~9s — triple "find" dissolve |
+| `FIND_Y_TOP/MID/BOT` | 1 / 22 / 43 | Vertical thirds for triple "find" |
 | `STALE_RESET_GENS` | 50 | ~38s before auto-reseed |
 
 ---

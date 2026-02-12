@@ -438,3 +438,19 @@ def bitmap_to_grid(bitmap, grid_width, grid_height, x_offset=0, y_offset=0):
                 continue
             grid[gy][gx] = bitmap[row][col]
     return grid
+
+
+def overlay_bitmap_to_grid(bitmap, grid, x_offset=0, y_offset=0):
+    """Overlay bitmap onto existing grid (OR operation — never clears cells)."""
+    grid_height = len(grid)
+    grid_width = len(grid[0]) if grid else 0
+    for row in range(len(bitmap)):
+        gy = y_offset + row
+        if gy < 0 or gy >= grid_height:
+            continue
+        for col in range(len(bitmap[row])):
+            gx = x_offset + col
+            if gx < 0 or gx >= grid_width:
+                continue
+            if bitmap[row][col]:
+                grid[gy][gx] = 1
