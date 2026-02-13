@@ -5,7 +5,7 @@
  *
  * Timing derives from two rhythms:
  *   The breath: 5s twinkle cycle. Pauses are 1/4, 1/2, 1, 3/2 fractions.
- *   The heartbeat: 429ms generation tick (140 BPM, drifts 80–200).
+ *   The heartbeat: 143ms generation tick (~7 Hz, drifts 4–12 Hz).
  *   Scroll decelerates line-to-line by phi (golden ratio).
  *
  * Requires: hzeller/rpi-rgb-led-matrix library built and installed.
@@ -40,7 +40,7 @@ static const int COLS = 64;
 //   Scroll decelerates by φ (golden ratio).
 //   Generation tick ≈ resting heartbeat.
 
-static const int HEARTBEAT_US        = 429000;   // 140 BPM
+static const int HEARTBEAT_US        = 143000;   // ~7 Hz (center)
 static const double PHI              = 1.618033988749895;
 static const int TWINKLE_US          = 5000000;  // 5s — the fundamental breath
 
@@ -49,8 +49,8 @@ static const double SCROLL_EXPONENTS[] = {0, 1, 1.5};  // φ exponents per line
 static const int PAUSE_BETWEEN_US    = HEARTBEAT_US;  // one heartbeat between lines
 static const int STARGAZE_US         = TWINKLE_US;            // one full breath
 static const int SEED_HOLD_US        = TWINKLE_US * 3 / 2;   // 7.5s — breath and a half
-static const int DISSOLVE_TOTAL_GENS = 12;   // accelerating cascade
-static const int STALE_RESET_GENS    = 50;
+static const int DISSOLVE_TOTAL_GENS = 35;   // accelerating cascade (~5s at 7 Hz)
+static const int STALE_RESET_GENS    = 150;  // ~21s at 7 Hz
 static const float INITIAL_DENSITY   = 0.20f;
 
 // Last-word vertical positions
@@ -60,27 +60,27 @@ static const int FIND_Y_BOT          = 43;
 static const int FIND_Y_UPPER_BRIDGE = 11;   // centered on top/mid boundary (row 21)
 static const int FIND_Y_LOWER_BRIDGE = 32;   // centered on mid/bot boundary (row 42)
 
-// Dissolve schedule: accelerating cascade (gaps: 4, 3, 2, 1 gens)
+// Dissolve schedule: accelerating cascade (gaps: 12, 9, 6, 3 gens)
 static const struct { int gen; int y; } DISSOLVE_SCHEDULE[] = {
-    {  4,  FIND_Y_TOP          },  // phase 2 (gap: 4)
-    {  7,  FIND_Y_BOT          },  // phase 3 (gap: 3)
-    {  9,  FIND_Y_UPPER_BRIDGE },  // phase 4 (gap: 2)
-    { 10,  FIND_Y_LOWER_BRIDGE },  // phase 5 (gap: 1)
+    { 12,  FIND_Y_TOP          },  // phase 2 (gap: 12)
+    { 21,  FIND_Y_BOT          },  // phase 3 (gap: 9)
+    { 27,  FIND_Y_UPPER_BRIDGE },  // phase 4 (gap: 6)
+    { 30,  FIND_Y_LOWER_BRIDGE },  // phase 5 (gap: 3)
 };
 static const int NUM_DISSOLVE_OVERLAYS = 4;
 
 // --- Circadian Rhythm ---
-//   Random walk on 15 steps, centered on 429ms (140 BPM).
-//   Range: 300ms (200 BPM) → 750ms (80 BPM).
-//   Every 8 generations: step up, down, or stay (equal odds).
+//   Random walk on 15 steps, centered on 143ms (7 Hz).
+//   Range: 83ms (12 Hz) → 250ms (4 Hz).
+//   Every 24 generations (~3.4s): step up, down, or stay (equal odds).
 //   Reflects at boundaries. Produces a bell curve around center.
-//   Steps in BPM: 200 192 183 175 166 158 149 140 131 123 114 106 97 89 80
-static const int CIRCADIAN_STEPS[]   = {300000, 313000, 328000, 343000, 361000,
-                                        380000, 403000, 429000, 458000, 488000,
-                                        526000, 566000, 619000, 674000, 750000};
+//   Steps in Hz: 12.0 11.1 10.3 9.5 8.8 8.1 7.5 7.0 6.5 6.0 5.6 5.1 4.8 4.4 4.0
+static const int CIRCADIAN_STEPS[]   = { 83000,  90000,  97000, 105000, 114000,
+                                        123000, 133000, 143000, 154000, 167000,
+                                        179000, 196000, 208000, 227000, 250000};
 static const int CIRCADIAN_COUNT     = 15;
 static const int CIRCADIAN_CENTER    = 7;
-static const int CIRCADIAN_STRIDE    = 8;
+static const int CIRCADIAN_STRIDE    = 24;
 
 // Colors
 static const uint8_t ALIVE_R = 0, ALIVE_G = 255, ALIVE_B = 0;
@@ -459,9 +459,9 @@ int main(int argc, char *argv[]) {
                 else if (new_pos >= CIRCADIAN_COUNT) new_pos = CIRCADIAN_COUNT - 2;
                 circadian_pos = new_pos;
                 if (move != 0) {
-                    int bpm = 60000000 / CIRCADIAN_STEPS[new_pos];
-                    printf("  Circadian: step %d (%dms, ~%d BPM)\n",
-                           new_pos, CIRCADIAN_STEPS[new_pos] / 1000, bpm);
+                    double hz = 1000000.0 / CIRCADIAN_STEPS[new_pos];
+                    printf("  Circadian: step %d (%dms, ~%.1f Hz)\n",
+                           new_pos, CIRCADIAN_STEPS[new_pos] / 1000, hz);
                 }
             }
         }
