@@ -26,8 +26,6 @@
 #include <string>
 #include <unistd.h>
 #include <vector>
-#include <set>
-#include <utility>
 #include <sys/time.h>
 
 using namespace rgb_matrix;
@@ -219,28 +217,37 @@ static void render_night_frame(FrameCanvas *canvas,
                                 int x_off, int y_off,
                                 uint8_t bg_r, uint8_t bg_g, uint8_t bg_b,
                                 double star_mult) {
-    // Build text pixel set
-    std::set<std::pair<int,int>> text_pixels;
-    for (int row = 0; row < (int)bitmap.size(); row++) {
+    // Use a flat array to track text pixels — avoids std::set overhead
+    uint8_t text_mask[ROWS * COLS];
+    memset(text_mask, 0, sizeof(text_mask));
+
+    int bmp_rows = (int)bitmap.size();
+    for (int row = 0; row < bmp_rows; row++) {
         int py = y_off + row;
         if (py < 0 || py >= ROWS) continue;
-        for (int col = 0; col < (int)bitmap[row].size(); col++) {
+        int bmp_cols = (int)bitmap[row].size();
+        for (int col = 0; col < bmp_cols; col++) {
             int px = x_off + col;
             if (px < 0 || px >= COLS) continue;
             if (bitmap[row][col])
-                text_pixels.insert({py, px});
+                text_mask[py * COLS + px] = 1;
         }
     }
 
-    // Fill background
-    for (int r = 0; r < ROWS; r++)
-        for (int c = 0; c < COLS; c++)
-            canvas->SetPixel(c, r, bg_r, bg_g, bg_b);
+    // Single pass: background + text
+    for (int r = 0; r < ROWS; r++) {
+        for (int c = 0; c < COLS; c++) {
+            if (text_mask[r * COLS + c])
+                canvas->SetPixel(c, r, ALIVE_R, ALIVE_G, ALIVE_B);
+            else
+                canvas->SetPixel(c, r, bg_r, bg_g, bg_b);
+        }
+    }
 
-    // Stars
+    // Stars (only on non-text pixels)
     if (star_mult > 0.01) {
         for (const auto &s : stars) {
-            if (text_pixels.count({s.row, s.col})) continue;
+            if (text_mask[s.row * COLS + s.col]) continue;
             double b = star_brightness(s) * star_mult;
             if (b > 0.05) {
                 canvas->SetPixel(s.col, s.row,
@@ -250,10 +257,6 @@ static void render_night_frame(FrameCanvas *canvas,
             }
         }
     }
-
-    // Text
-    for (const auto &p : text_pixels)
-        canvas->SetPixel(p.second, p.first, ALIVE_R, ALIVE_G, ALIVE_B);
 }
 
 // --- Ticker ---
