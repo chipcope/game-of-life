@@ -5,7 +5,7 @@
  *
  * Timing derives from two rhythms:
  *   The breath: 5s twinkle cycle. Pauses are 1/4, 1/2, 1, 3/2 fractions.
- *   The heartbeat: 750ms generation tick.
+ *   The heartbeat: 429ms generation tick (140 BPM, range 120–160).
  *   Scroll decelerates line-to-line by phi (golden ratio).
  *
  * Requires: hzeller/rpi-rgb-led-matrix library built and installed.
@@ -40,7 +40,7 @@ static const int COLS = 64;
 //   Scroll decelerates by φ (golden ratio).
 //   Generation tick ≈ resting heartbeat.
 
-static const int HEARTBEAT_US        = 750000;   // 80 BPM
+static const int HEARTBEAT_US        = 429000;   // 140 BPM
 static const double PHI              = 1.618033988749895;
 static const int TWINKLE_US          = 5000000;  // 5s — the fundamental breath
 
@@ -70,11 +70,12 @@ static const struct { int gen; int y; } DISSOLVE_SCHEDULE[] = {
 static const int NUM_DISSOLVE_OVERLAYS = 4;
 
 // --- Circadian Rhythm ---
-//   Random walk on 9 steps, centered on 750ms (80 BPM).
+//   Random walk on 9 steps, centered on 429ms (140 BPM).
+//   Range: 375ms (160 BPM) → 500ms (120 BPM).
 //   Every 8 generations: step up, down, or stay (equal odds).
 //   Reflects at boundaries. Produces a bell curve around center.
-static const int CIRCADIAN_STEPS[]   = {600000, 632000, 674000, 714000, 750000,
-                                        800000, 857000, 938000, 1034000};
+static const int CIRCADIAN_STEPS[]   = {375000, 390000, 406000, 417000, 429000,
+                                        441000, 455000, 476000, 500000};
 static const int CIRCADIAN_COUNT     = 9;
 static const int CIRCADIAN_CENTER    = 4;
 static const int CIRCADIAN_STRIDE    = 8;
