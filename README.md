@@ -29,13 +29,13 @@ sudo ./game-of-life
 
 ## What Happens
 
-Timing derives from two rhythms: the **breath** (5-second twinkle cycle) and the **heartbeat** (750ms generation tick, ~80 BPM). Scroll speed decelerates line-to-line by φ (golden ratio).
+Timing derives from two rhythms: the **breath** (5-second twinkle cycle) and the **heartbeat** (143ms generation tick, ~7 Hz). Scroll speed decelerates line-to-line by φ (golden ratio).
 
 1. **Stargazing** — 5 seconds of pure night sky. 12 stars twinkle on black. One full breath before anything happens.
 2. **Ticker** scrolls three lines of a cryptic message in gothic blackletter, each line slower than the last (φ deceleration: 47ms → 76ms → 97ms per pixel). One heartbeat pause between each line.
 3. **Dawn** — the last word holds for 7.5s (1½ breaths) as the background transitions from black → primary blue. Stars fade out.
-4. **Dissolve** — Accelerating cascade over 12 generations: the last word dissolves, then reappears at different vertical positions with shrinking gaps (4, 3, 2, 1 gens) — a countdown that mirrors the ticker's φ-deceleration in reverse. The heartbeat holds steady at 750ms during the cascade for deterministic timing. The scattered remnants become the simulation seed — no random reseed.
-5. **Cruise** — simulation runs indefinitely with a **circadian rhythm**: a random walk across 9 tempo steps (58–100 BPM) that drifts every 8 generations, bell-curving around 80 BPM. Auto-reseeds after 50 stale generations.
+4. **Dissolve** — Accelerating cascade over 35 generations (~5s): the last word dissolves, then reappears at different vertical positions with shrinking gaps (12, 9, 6, 3 gens) — a countdown that mirrors the ticker's φ-deceleration in reverse. The tempo holds steady at 7 Hz during the cascade for deterministic timing. The scattered remnants become the simulation seed — no random reseed.
+5. **Cruise** — simulation runs indefinitely with a **circadian rhythm**: a random walk across 15 tempo steps (4–12 Hz) that drifts every 24 generations (~3.4s), bell-curving around 7 Hz. Auto-reseeds after 150 stale generations (~21s).
 
 **Colors:** Primary green (#00ff00) alive cells on primary blue (#0000ff) background. The green is the one constant as the world transforms around it.
 
@@ -63,9 +63,10 @@ The Pi 3 A+ is recommended for its small form factor (65×56mm) — same SoC as 
 
 1. Flash **Raspberry Pi OS Lite (64-bit)** via Raspberry Pi Imager. Enable SSH and WiFi in Imager settings before writing.
 2. Seat the **RGB Matrix HAT/Bonnet** on all 40 GPIO pins
-3. Connect **HUB75 ribbon cable**: HAT output → panel INPUT
-4. Wire **5V power supply** to HAT screw terminals (powers both Pi and panel)
-5. Disable onboard audio in `/boot/config.txt`: `dtparam=audio=off`
+3. **Solder Address E jumper** — on the bottom of the Bonnet/HAT, bridge the center **E** pad to the **8** pad (required for 64×64 panels to address all 64 rows)
+4. Connect **HUB75 ribbon cable**: HAT output → panel INPUT
+5. Wire **5V power supply** to HAT screw terminals (powers both Pi and panel)
+6. Disable onboard audio in `/boot/config.txt`: `dtparam=audio=off`
 
 ---
 
@@ -92,21 +93,21 @@ sudo make install-python PYTHON=$(which python3)
 
 ## Configuration
 
-Timing derives from two rhythms. The **breath** (5s twinkle cycle) governs pauses and transitions. The **heartbeat** (~750ms) governs generation ticks, modulated by a circadian random walk. Scroll speed decelerates by φ (golden ratio).
+Timing derives from two rhythms. The **breath** (5s twinkle cycle) governs pauses and transitions. The **heartbeat** (~143ms, 7 Hz) governs generation ticks, modulated by a circadian random walk. Scroll speed decelerates by φ (golden ratio).
 
 | Parameter | Value | Derivation |
 |-----------|-------|------------|
 | `TWINKLE` | 5s cycle | The fundamental breath |
 | `STARGAZE` | 5000ms | 1 breath — opening pause |
-| `PAUSE_BETWEEN` | 750ms | One heartbeat between lines |
+| `PAUSE_BETWEEN` | 143ms | One heartbeat between lines |
 | `SEED_HOLD` | 7500ms | 1½ breaths — last word hold + dawn |
 | `SCROLL_BASE_DELAY` | 47ms/px | Fastest line (line 1) |
 | `SCROLL_EXPONENTS` | 0, 1, 1.5 | φ⁰=47, φ¹=76, φ^1.5≈97 ms/px |
-| `CIRCADIAN_STEPS` | 600–1034ms | 9 tempo steps, 58–100 BPM |
-| `CIRCADIAN_STRIDE` | 8 gens | Random walk interval (~6s at center) |
-| `DISSOLVE_TOTAL_GENS` | 12 | ~9s — accelerating cascade (gaps: 4,3,2,1) |
+| `CIRCADIAN_STEPS` | 83–250ms | 15 tempo steps, 4–12 Hz |
+| `CIRCADIAN_STRIDE` | 24 gens | Random walk interval (~3.4s at center) |
+| `DISSOLVE_TOTAL_GENS` | 35 | ~5s — accelerating cascade (gaps: 12,9,6,3) |
 | `FIND_Y_*` | 1/11/22/32/43 | Vertical positions for dissolve overlays |
-| `STALE_RESET_GENS` | 50 | ~38s before auto-reseed |
+| `STALE_RESET_GENS` | 150 | ~21s before auto-reseed |
 
 ---
 
