@@ -60,14 +60,15 @@ SCROLL_EXPONENTS = [0, 1, 1.5]        # φ exponents per line: 1×, φ, φ^1.5
 PAUSE_BETWEEN_LINES = HEARTBEAT       # one heartbeat between lines
 STARGAZE = TWINKLE_PERIOD             # one full breath before first scroll
 SEED_HOLD = TWINKLE_PERIOD * 1.5     # 7.5s — breath and a half on last word
+FIND_FREEZE = TWINKLE_PERIOD          # 5s — one breath on the word
 TEXT_COLOR = ALIVE_COLOR
 
 # --- Dawn ---
-DAWN_STEPS = 50
-DAWN_STEP_DELAY = SEED_HOLD / DAWN_STEPS
+DAWN_STEPS = 100
+DAWN_STEP_DELAY = 0.150               # 150ms per step → 15s sunrise
 
 # --- Simulation ---
-DISSOLVE_TOTAL_GENS = 12              # accelerating cascade
+DISSOLVE_TOTAL_GENS = 18              # accelerating cascade (1.5× stretch)
 
 # Last-word vertical positions
 FIND_Y_TOP = 1
@@ -76,12 +77,12 @@ FIND_Y_BOT = 43
 FIND_Y_UPPER_BRIDGE = 11             # centered on top/mid boundary (row 21)
 FIND_Y_LOWER_BRIDGE = 32             # centered on mid/bot boundary (row 42)
 
-# Dissolve schedule: accelerating cascade (gaps: 4, 3, 2, 1 gens)
+# Dissolve schedule: accelerating cascade (gaps: 6, 5, 3, 2 gens)
 DISSOLVE_SCHEDULE = [
-    ( 4, FIND_Y_TOP),                 # phase 2 (gap: 4)
-    ( 7, FIND_Y_BOT),                 # phase 3 (gap: 3)
-    ( 9, FIND_Y_UPPER_BRIDGE),        # phase 4 (gap: 2)
-    (10, FIND_Y_LOWER_BRIDGE),        # phase 5 (gap: 1)
+    ( 6, FIND_Y_TOP),                 # phase 2 (gap: 6)
+    (11, FIND_Y_BOT),                 # phase 3 (gap: 5)
+    (14, FIND_Y_UPPER_BRIDGE),        # phase 4 (gap: 3)
+    (16, FIND_Y_LOWER_BRIDGE),        # phase 5 (gap: 2)
 ]
 
 # --- Circadian Rhythm ---
@@ -116,7 +117,8 @@ class StarField:
         text_top = y_offset
         text_bot = y_offset + char_height
         sky_pixels = [(r, c) for r in range(ROWS) for c in range(COLS)
-                      if r < text_top or r >= text_bot]
+                      if (r < text_top or r >= text_bot)
+                      and not (r == 0 and c == 0)]  # dead pixel
         chosen = random.sample(sky_pixels, min(NUM_STARS, len(sky_pixels)))
         for r, c in chosen:
             phase = random.uniform(0, 2 * math.pi)
@@ -125,7 +127,9 @@ class StarField:
     def get_brightness(self, phase):
         t = time.time() - self.start_time
         val = math.sin(2 * math.pi * TWINKLE_HZ * t + phase)
-        return max(0.0, val)
+        if val <= 0.0:
+            return 0.0              # dark half: fully off
+        return max(0.3, val)        # bright half: floor at 0.3
 
 
 def render_night_frame(canvas, bitmap, x_offset, y_offset, stars,
@@ -163,6 +167,9 @@ def render_night_frame(canvas, bitmap, x_offset, y_offset, stars,
     for (py, px) in text_pixels:
         canvas.SetPixel(px, py, *TEXT_COLOR)
 
+    # Mask dead pixel
+    canvas.SetPixel(0, 0, 0, 0, 0)
+
 
 def scroll_line(matrix, canvas, text, y_offset, stars, line_index=0):
     bitmap = text_to_bitmap(text)
@@ -193,9 +200,17 @@ def scroll_final_and_dawn(matrix, canvas, text, y_offset, stars, line_index=0):
         x -= 1
         time.sleep(delay)
 
-    # Dawn transition
+    # Freeze: hold FIND on night sky with twinkling stars
     find_bitmap = text_to_bitmap(find_text)
-    print(f"  Dawn transition ({DAWN_STEPS} steps)...")
+    freeze_ticks = int(FIND_FREEZE / HEARTBEAT)
+    print(f"  Freeze on FIND ({freeze_ticks} ticks, ~{FIND_FREEZE:.0f}s)...")
+    for _ in range(freeze_ticks):
+        render_night_frame(canvas, find_bitmap, 0, y_offset, stars)
+        canvas = matrix.SwapOnVSync(canvas)
+        time.sleep(HEARTBEAT)
+
+    # Dawn transition
+    print(f"  Dawn transition ({DAWN_STEPS} steps, ~{DAWN_STEPS * DAWN_STEP_DELAY:.0f}s)...")
     for step in range(DAWN_STEPS):
         t = step / DAWN_STEPS
         bg = lerp_color(NIGHT_COLOR, DEAD_COLOR, t)
@@ -213,7 +228,9 @@ def scroll_final_and_dawn(matrix, canvas, text, y_offset, stars, line_index=0):
 def render_grid(matrix, canvas, grid):
     for r in range(ROWS):
         for c in range(COLS):
-            if grid[r][c]:
+            if r == 0 and c == 0:
+                canvas.SetPixel(0, 0, 0, 0, 0)  # dead pixel
+            elif grid[r][c]:
                 canvas.SetPixel(c, r, *ALIVE_COLOR)
             else:
                 canvas.SetPixel(c, r, *DEAD_COLOR)

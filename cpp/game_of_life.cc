@@ -48,8 +48,9 @@ static const int SCROLL_BASE_DELAY_US = 47000;
 static const double SCROLL_EXPONENTS[] = {0, 1, 1.5};  // φ exponents per line
 static const int PAUSE_BETWEEN_US    = HEARTBEAT_US;  // one heartbeat between lines
 static const int STARGAZE_US         = TWINKLE_US;            // one full breath
+static const int FIND_FREEZE_US      = TWINKLE_US;             // 5s — one breath on the word
 static const int SEED_HOLD_US        = TWINKLE_US * 3 / 2;   // 7.5s — breath and a half
-static const int DISSOLVE_TOTAL_GENS = 35;   // accelerating cascade (~5s at 7 Hz)
+static const int DISSOLVE_TOTAL_GENS = 50;   // accelerating cascade (~7s at 7 Hz)
 static const int STALE_RESET_GENS    = 150;  // ~21s at 7 Hz
 static const float INITIAL_DENSITY   = 0.20f;
 
@@ -60,12 +61,12 @@ static const int FIND_Y_BOT          = 43;
 static const int FIND_Y_UPPER_BRIDGE = 11;   // centered on top/mid boundary (row 21)
 static const int FIND_Y_LOWER_BRIDGE = 32;   // centered on mid/bot boundary (row 42)
 
-// Dissolve schedule: accelerating cascade (gaps: 12, 9, 6, 3 gens)
+// Dissolve schedule: accelerating cascade (gaps: 18, 13, 9, 5 gens)
 static const struct { int gen; int y; } DISSOLVE_SCHEDULE[] = {
-    { 12,  FIND_Y_TOP          },  // phase 2 (gap: 12)
-    { 21,  FIND_Y_BOT          },  // phase 3 (gap: 9)
-    { 27,  FIND_Y_UPPER_BRIDGE },  // phase 4 (gap: 6)
-    { 30,  FIND_Y_LOWER_BRIDGE },  // phase 5 (gap: 3)
+    { 18,  FIND_Y_TOP          },  // phase 2 (gap: 18)
+    { 31,  FIND_Y_BOT          },  // phase 3 (gap: 13)
+    { 40,  FIND_Y_UPPER_BRIDGE },  // phase 4 (gap: 9)
+    { 45,  FIND_Y_LOWER_BRIDGE },  // phase 5 (gap: 5)
 };
 static const int NUM_DISSOLVE_OVERLAYS = 4;
 
@@ -93,8 +94,8 @@ static const int NUM_STARS = 12;
 static const double TWINKLE_HZ = 1.0 / 5.0;
 
 // Dawn
-static const int DAWN_STEPS = 50;
-static const int DAWN_STEP_US = SEED_HOLD_US / DAWN_STEPS;
+static const int DAWN_STEPS = 100;
+static const int DAWN_STEP_US = 150000;   // 150ms per step → 15s sunrise
 
 static const char *TICKER_LINES[] = {
     "Fate isnt what were up against",
@@ -138,6 +139,7 @@ static void init_stars(int y_offset, int char_height) {
     for (int r = 0; r < ROWS; r++) {
         if (r >= text_top && r < text_bot) continue;
         for (int c = 0; c < COLS; c++) {
+            if (r == 0 && c == 0) continue;  // dead pixel
             sky.push_back({r, c});
         }
     }
@@ -157,7 +159,8 @@ static void init_stars(int y_offset, int char_height) {
 static double star_brightness(const Star &s) {
     double t = now_seconds() - stars_start_time;
     double val = sin(2.0 * M_PI * TWINKLE_HZ * t + s.phase);
-    return val > 0.0 ? val : 0.0;
+    if (val <= 0.0) return 0.0;        // dark half: fully off
+    return val < 0.3 ? 0.3 : val;     // bright half: floor at 0.3
 }
 
 // --- Grid helpers ---
@@ -207,7 +210,9 @@ static void randomize(uint8_t *g) {
 static void render_grid(FrameCanvas *canvas, uint8_t *g) {
     for (int r = 0; r < ROWS; r++) {
         for (int c = 0; c < COLS; c++) {
-            if (at(g, r, c))
+            if (r == 0 && c == 0) {
+                canvas->SetPixel(0, 0, 0, 0, 0);  // dead pixel
+            } else if (at(g, r, c))
                 canvas->SetPixel(c, r, ALIVE_R, ALIVE_G, ALIVE_B);
             else
                 canvas->SetPixel(c, r, DEAD_R, DEAD_G, DEAD_B);
@@ -260,6 +265,9 @@ static void render_night_frame(FrameCanvas *canvas,
             }
         }
     }
+
+    // Mask dead pixel
+    canvas->SetPixel(0, 0, 0, 0, 0);
 }
 
 // --- Ticker ---
@@ -321,9 +329,21 @@ static FrameCanvas *scroll_final_and_dawn(RGBMatrix *matrix, FrameCanvas *canvas
         usleep(delay);
     }
 
-    // Dawn transition
+    // Freeze: hold FIND on night sky with twinkling stars
     auto find_bitmap = text_to_bitmap(find_text);
-    printf("  Dawn transition (%d steps)...\n", DAWN_STEPS);
+    int freeze_ticks = FIND_FREEZE_US / HEARTBEAT_US;
+    printf("  Freeze on FIND (%d ticks, ~%ds)...\n",
+           freeze_ticks, FIND_FREEZE_US / 1000000);
+    for (int i = 0; i < freeze_ticks && !interrupted; i++) {
+        render_night_frame(canvas, find_bitmap, 0, y_offset,
+                            NIGHT_R, NIGHT_G, NIGHT_B, 1.0);
+        canvas = matrix->SwapOnVSync(canvas);
+        usleep(HEARTBEAT_US);
+    }
+
+    // Dawn transition
+    printf("  Dawn transition (%d steps, ~%ds)...\n",
+           DAWN_STEPS, DAWN_STEPS * DAWN_STEP_US / 1000000);
     for (int step = 0; step < DAWN_STEPS && !interrupted; step++) {
         double t = (double)step / DAWN_STEPS;
         uint8_t bg_r = lerp(NIGHT_R, DEAD_R, t);

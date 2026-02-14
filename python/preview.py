@@ -71,13 +71,14 @@ SCROLL_EXPONENTS = [0, 1, 1.5]        # φ exponents per line: 1×, φ, φ^1.5
 PAUSE_BETWEEN_MS = HEARTBEAT_MS       # one heartbeat between lines
 STARGAZE_MS = TWINKLE_MS              # one full breath before first scroll
 SEED_HOLD_MS = TWINKLE_MS + TWINKLE_MS // 2  # 7.5s — breath and a half on last word
+FIND_FREEZE_MS = TWINKLE_MS                  # 5s — one breath on the word
 
 # --- Dawn transition ---
-DAWN_STEPS = 50
-DAWN_STEP_MS = SEED_HOLD_MS // DAWN_STEPS  # 150ms per step
+DAWN_STEPS = 100
+DAWN_STEP_MS = 150                    # 150ms per step → 15s sunrise
 
 # --- Simulation ---
-DISSOLVE_TOTAL_GENS = 12              # accelerating cascade
+DISSOLVE_TOTAL_GENS = 18              # accelerating cascade (1.5× stretch)
 INITIAL_DENSITY = 0.20
 STALE_RESET_GENS = 50
 
@@ -88,12 +89,12 @@ FIND_Y_BOT = 43
 FIND_Y_UPPER_BRIDGE = 11             # centered on top/mid boundary (row 21)
 FIND_Y_LOWER_BRIDGE = 32             # centered on mid/bot boundary (row 42)
 
-# Dissolve schedule: accelerating cascade (gaps: 4, 3, 2, 1 gens)
+# Dissolve schedule: accelerating cascade (gaps: 6, 5, 3, 2 gens)
 DISSOLVE_SCHEDULE = [
-    ( 4, FIND_Y_TOP),                 # phase 2 (gap: 4)
-    ( 7, FIND_Y_BOT),                 # phase 3 (gap: 3)
-    ( 9, FIND_Y_UPPER_BRIDGE),        # phase 4 (gap: 2)
-    (10, FIND_Y_LOWER_BRIDGE),        # phase 5 (gap: 1)
+    ( 6, FIND_Y_TOP),                 # phase 2 (gap: 6)
+    (11, FIND_Y_BOT),                 # phase 3 (gap: 5)
+    (14, FIND_Y_UPPER_BRIDGE),        # phase 4 (gap: 3)
+    (16, FIND_Y_LOWER_BRIDGE),        # phase 5 (gap: 2)
 ]
 
 # --- Circadian Rhythm ---
@@ -135,7 +136,8 @@ class StarField:
         text_top = y_offset
         text_bot = y_offset + char_height
         sky_pixels = [(r, c) for r in range(ROWS) for c in range(COLS)
-                      if r < text_top or r >= text_bot]
+                      if (r < text_top or r >= text_bot)
+                      and not (r == 0 and c == 0)]  # dead pixel
         chosen = random.sample(sky_pixels, min(NUM_STARS, len(sky_pixels)))
         for r, c in chosen:
             phase = random.uniform(0, 2 * math.pi)
@@ -146,7 +148,9 @@ class StarField:
         if t is None:
             t = time.time() - self.start_time
         val = math.sin(2 * math.pi * TWINKLE_HZ * t + phase)
-        return max(0.0, val)  # dark half the cycle = natural twinkle
+        if val <= 0.0:
+            return 0.0              # dark half: fully off
+        return max(0.3, val)        # bright half: floor at 0.3
 
 
 class LEDMatrix:
@@ -187,10 +191,13 @@ class LEDMatrix:
     def render_grid(self, grid):
         for r in range(ROWS):
             for c in range(COLS):
-                self.canvas.itemconfig(
-                    self.pixels[r][c],
-                    fill=ALIVE_HEX if grid[r][c] else DAY_HEX
-                )
+                if r == 0 and c == 0:
+                    self.canvas.itemconfig(self.pixels[0][0], fill='#000000')
+                else:
+                    self.canvas.itemconfig(
+                        self.pixels[r][c],
+                        fill=ALIVE_HEX if grid[r][c] else DAY_HEX
+                    )
 
     def update(self):
         self.root.update_idletasks()
@@ -245,6 +252,9 @@ class GameOfLife:
         for (py, px) in text_pixels:
             self.display.set_pixel(py, px, ALIVE_HEX)
 
+        # Mask dead pixel
+        self.display.set_pixel(0, 0, '#000000')
+
     def scroll_line(self, text, callback, line_index=0):
         bitmap = text_to_bitmap(text)
         text_width = len(bitmap[0]) if bitmap else 0
@@ -273,7 +283,7 @@ class GameOfLife:
 
         def step(x):
             if x <= x_stop:
-                self.dawn_transition(callback)
+                self.find_freeze(callback)
                 return
             try:
                 self.render_night_frame(bitmap, x)
@@ -283,6 +293,25 @@ class GameOfLife:
                 pass
 
         step(COLS)
+
+    def find_freeze(self, callback):
+        """Hold FIND on night sky with twinkling stars."""
+        find_bitmap = text_to_bitmap("find")
+
+        def tick(remaining):
+            if remaining <= 0:
+                self.dawn_transition(callback)
+                return
+            try:
+                self.render_night_frame(find_bitmap, 0)
+                self.display.update()
+                wait = min(remaining, 80)  # update stars ~12fps
+                self.display.root.after(wait,
+                                         lambda: tick(remaining - wait))
+            except tk.TclError:
+                pass
+
+        tick(FIND_FREEZE_MS)
 
     def dawn_transition(self, callback):
         """Sunrise: black→blue background, stars fade out, last word stays."""
